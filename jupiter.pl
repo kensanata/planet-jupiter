@@ -19,6 +19,7 @@ use utf8;
 binmode(STDOUT, ":utf8");
 binmode(STDERR, ":utf8");
 
+use JSON;
 use List::Util qw(uniq min);
 use File::Slurp;
 use XML::LibXML;
@@ -119,6 +120,7 @@ sub update_cache {
   my $ua = Mojo::UserAgent->new;
   make_promises($ua, $feeds);
   fetch_feeds($feeds);
+  save_feed_metadata($feeds);
   cleanup_cache($feeds);
 }
 
@@ -128,7 +130,7 @@ sub make_promises {
   for my $feed (@$feeds) {
     my $url = $feed->{url};
     # returning 0 in the case of an error is important
-    $feed->{promise} = $ua->get_p($url)->catch(sub{ warn "⚠ $url → @_\n"; 0; });
+    $feed->{promise} = $ua->get_p($url)->catch(sub { $feed->{message} = "@_"; 0; });
   }
 }
 
@@ -143,7 +145,8 @@ sub fetch_feeds {
       my $tx = $value->[0];
       # relies on catch returning 0 above
       next unless $tx;
-      $feed->{result} = $tx->result;
+      $feed->{message} = $tx->result->message;
+      $feed->{code} = $tx->result->code;
       # save raw bytes
       write_file($feed->{cache_file}, $tx->result->body)
 	  or warn "Unable to write $feed->{cache_file}\n";
@@ -153,16 +156,34 @@ sub fetch_feeds {
   })->wait;
 }
 
+sub save_feed_metadata {
+  my $feeds = shift;
+  my %messages = map {
+    $_->{url} =>
+    {
+      title => $_->{title},
+      link => $_->{link},
+      message => $_->{message},
+      code => $_->{code},
+    }
+  } @$feeds;
+  write_file('messages.json', {binmode => ':utf8'}, encode_json \%messages);
+}
+
+sub load_feed_metadata {
+  my $feeds = shift;
+  my $data = decode_json read_file('messages.json', {binmode => ':utf8'});
+  for my $feed (@$feeds) {
+    my $url = $feed->{url};
+    $feed->{title} = $data->{$url}->{title} unless $feed->{title};
+    $feed->{link} = $data->{$url}->{link} unless $feed->{link};
+    $feed->{message} = $data->{$url}->{message} unless $feed->{message};
+    $feed->{code} = $data->{$url}->{code} unless $feed->{code};
+  }
+}
+
 sub cleanup_cache {
   my $feeds = shift;
-  # this is about feeds that returned an error
-  my @failure = grep { not $_->{result} and -e $_->{cache_file} } @$feeds;
-  if (@failure) {
-    say "Removing failed requests from the cache...";
-    foreach (@failure) { say "→ $_->{title}" }
-    unlink map { $_->{cache_file} } @failure;
-  }
-  # this is about unknown files
   my %good = map { $_ => 1 } @{cache_files($feeds)};
   my @unused = grep { not $good{$_} } @{existing_files($feeds)};
   if (@unused) {
@@ -199,7 +220,7 @@ sub make_directories {
 # Creates list of feeds. Each feed is a hash with keys title, url, opml_file,
 # cache_dir and cache_file.
 sub read_opml {
-  my @feeds;
+  my (@feeds, @files);
   for my $file (@ARGV) {
     my $doc = XML::LibXML->load_xml(string => scalar read_file($file, {binmode => ':utf8'}));
     my @nodes = $doc->findnodes('//outline[./@xmlUrl]');
@@ -216,7 +237,9 @@ sub read_opml {
       }
     } @nodes;
     warn "No feeds found in the OPML file $file\n" unless @nodes;
+    push @files, { file => $file, name => $name };
   }
+  return \@feeds, \@files if wantarray;
   return \@feeds;
 }
 
@@ -227,24 +250,27 @@ sub url_to_file {
 }
 
 sub make_html {
-  my $feeds = read_opml();
+  my ($feeds, $files) = read_opml();
+  my $globals = globals($files);
   my $xpc = XML::LibXML::XPathContext->new;
   $xpc->registerNs('atom', 'http://www.w3.org/2005/Atom');
   $xpc->registerNs('html', 'http://www.w3.org/1999/xhtml');
   $xpc->registerNs('dc', 'http://purl.org/dc/elements/1.1/');
-  my $entries = entries($xpc, $feeds, 4);
-  add_data($xpc, $entries);
+  my $entries = entries($xpc, $feeds, 4); # set messages for feeds, too
+  add_data($xpc, $entries);   # extract data from the xml
+  load_feed_metadata($feeds); # load messages and codes for feeds
+  save_feed_metadata($feeds); # save title and link for feeds
   $entries = limit($entries, 100);
-  my $globals = globals();
   apply_entry_template($entries, scalar read_file('post.html', {binmode => ':utf8'}));
   my $html = apply_page_template(scalar read_file('page.html', {binmode => ':utf8'}), $globals, $feeds, $entries);
   write_file('index.html', {binmode => ':utf8'}, $html);
 }
 
 sub globals {
+  my $files = shift;
   my @time = gmtime;
   my $today = strftime("%Y-%m-%d", @time);
-  return { date => $today };
+  return {date => $today, files => $files};
 }
 
 sub entries {
@@ -254,23 +280,39 @@ sub entries {
   my @entries;
   for my $feed (@$feeds) {
     next unless -r $feed->{cache_file};
-    my $doc = XML::LibXML->load_xml(string => scalar read_file($feed->{cache_file}, {binmode => ':utf8'}));
+    my $doc = eval { XML::LibXML->load_xml(string => scalar read_file($feed->{cache_file}, {binmode => ':utf8'})) };
+    next unless $doc;
     # RSS and Atom! We assume that earlier entries are newer. ｢The Entries in
     # the returned Atom Feed SHOULD be ordered by their "app:edited" property,
     # with the most recently edited Entries coming first in the document order.｣
     my @nodes = $xpc->findnodes(
       "//item[position() <= $limit] | //atom:entry[position() <= $limit]",
       $doc);
-    push(@entries, map {
-      {
-	xml => $_,
-	feed => $feed,
-	blog_title => $feed->{title},
-	blog_feed => $feed->{url},
-      }
-    } @nodes);
+    if (@nodes) {
+      push(@entries, map {
+	{
+	  xml => $_,
+	  feed => $feed,
+	  blog_title => $feed->{title},
+	  blog_feed => $feed->{url},
+	}
+      } @nodes);
+      add_age_warning($xpc, $feed, $nodes[0]);
+    } else {
+      $feed->{message} = "Empty feed";
+      $feed->{code} = 204; # no content
+    }
   }
   return \@entries;
+}
+
+sub add_age_warning {
+  my $xpc = shift;
+  my $feed = shift;
+  my $node = shift;
+  my $ninety_days = 7776000; # 90 * 24 * 60 * 60
+  my $seconds = parsedate $xpc->findvalue('pubDate | atom:updated', $node);
+  $feed->{message} = "No updates in 90 days" if $seconds > $ninety_days;
 }
 
 sub limit {

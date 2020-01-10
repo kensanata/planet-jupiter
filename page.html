@@ -27,7 +27,16 @@
     <input type="checkbox" id="toggle">
     <ul id="toggled">
 % for my $feed (@$feeds) {
-      <li><a href="<%= $feed->{url} =%>"><img src="feed.png" alt="(feed)"></a> <% if ($feed->{link}) { %><a href="<%= $feed->{link} =%>"><%= $feed->{title} =%></a><% } else { %><%= $feed->{title} =%><% } %></li>
+      <li><a href="<%= $feed->{url} =%>"><img src="feed.png" alt="(feed)"></a> \
+%   if ($feed->{message} and $feed->{code} and $feed->{code} ne "200" and $feed->{link}) {
+<a class="message" title="<%= $feed->{code} =%>: <%= $feed->{message} =%>" href="<%= $feed->{link} =%>"><%= $feed->{title} =%></a>
+%   } elsif ($feed->{link}) {
+<a href="<%= $feed->{link} =%>"><%= $feed->{title} =%></a>
+%   } elsif ($feed->{message} and (not $feed->{code} or $feed->{code} ne "200")) {
+<a class="message" title="<%= $feed->{message} =%>"><%= $feed->{title} =%></a>
+%   } else {
+%= $feed->{title} . " " . $feed->{message} . " " . $feed->{code}
+%   }
 % }
     </ul>
     <h2>Info</h2>
@@ -37,8 +46,9 @@
       <dt>Powered by:</dt>
       <dd><a href="https://alexschroeder.ch/cgit/planet-jupiter/about/" class="jupiter button">Jupiter</a></dd>
       <dt>Export:</dt>
-      <dd><a href="opml.xml" class="opml button">OPML</a></dd>
-      <dd><a href="atom.xml" class="atom button">Atom</a></dd>
+% for my $file (@{$globals->{files}}) {
+      <dd><a href="<%= $file->{file} %>" class="opml button"><%= $file->{name} %></a></dd>
+% }
     </dl>
   </div>
   <div id="body">
@@ -46,7 +56,7 @@
 % for my $entry (@$entries) {
 % if ($entry->{day} ne $day) {
 %   $day = $entry->{day};
-    <h2 class="date"><%= $entry->{day} =%></h2>
+<h2 class="date"><%= $entry->{day} =%></h2>
 % }
 %= $entry->{html}
 % }
