@@ -1,35 +1,31 @@
+# Planet Jupiter
 
-Planet Jupiter
-==============
+This program is used to pull together the latest updates from a bunch of other
+sites and display them on a single web page. The sites we get our updates from
+are defined in an OPML file.
 
-This program is used to pull together the latest updates from a bunch
-of other sites and display them on a single web page.
+## The OPML file
 
-The web page is a static HTML web page. The program is called from a
-job, once every few hours. It checks the feeds (RSS or Atom) of the
-various sites it's following and recreates the web page.
+You **need** an OPML file. It's an XML file linking to _feeds_. Here's an
+example listing just one feed. In order to add more, add more `outline`
+elements with the `xmlUrl` attribute. The exact order and nesting does not
+matter. People can _import_ these OPML files into their own feed readers and
+thus it may make sense to send a bit more effort in making it presentable.
 
-The sites it is following are pulled from an OPML file. Here's an
-example of an OPML file:
+    <opml version="2.0">
+      <body>
+        <outline title="Alex Schroeder"
+                 xmlUrl="https://alexschroeder.ch/wiki?action=rss"/>
+      </body>
+    </opml>
 
-```xml
-<opml version="2.0">
-  <body>
-    <outline title="Other Blogs">
-      <outline title="Alex Schroeder" xmlUrl="https://alexschroeder.ch/wiki/feed/full/RPG"/>
-      <outline title="The Alexandrian" xmlUrl="https://thealexandrian.net/feed"/>
-      <outline title="The Bottomless Sarcophagus" xmlUrl="https://bottomlesssarcophagus.blogspot.com/feeds/posts/default"/>
-      <outline title="Wanderer Bill’s Journal" xmlUrl="https://betola.de/wandererbill/feed/"/>
-    </outline>
-  </body>
-</opml>
-```
+## Update the feeds in your cache
 
-*Planet Jupiter* simple searches the OPML file for outline elements
-with the `xmlURL` attribute and reads the feed from there. The file is
-assumed to have the extension `opml`.
+This is how you update the feeds in a file called `feed.opml`. It downloads all
+the feeds linked to in the OPML file and stores them in the cache directory.
 
-The feeds are all stored on the file system in a directory called like
-the OPML file, minus the extension. If the OPML file is called
-`feeds.opml` then the cache directory is called `feeds`.
+    perl jupiter.pl update feed.opml
 
+The directory used to keep a copy of all the feeds in the OPML file has the same
+name as the OPML file but without the .opml extension. In other words, if your
+OPML file is called `feed.opml` then the cache directory is called `feed`.
