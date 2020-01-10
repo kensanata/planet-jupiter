@@ -218,9 +218,16 @@ sub make_html {
   my $entries = entries($xpc, $feeds, 4);
   add_data($xpc, $entries);
   $entries = limit($entries, 100);
+  my $globals = globals();
   apply_entry_template($entries, scalar read_file('post.html', {binmode => ':utf8'}));
-  my $html = apply_page_template($entries, scalar read_file('page.html', {binmode => ':utf8'}));
+  my $html = apply_page_template(scalar read_file('page.html', {binmode => ':utf8'}), $globals, $feeds, $entries);
   write_file('index.html', {binmode => ':utf8'}, $html);
+}
+
+sub globals {
+  my @time = gmtime;
+  my $today = strftime("%Y-%m-%d", @time);
+  return { date => $today };
 }
 
 sub entries {
@@ -240,6 +247,8 @@ sub entries {
     push(@entries, map {
       {
 	xml => $_,
+	feed => $feed,
+	blog_title => $feed->{title},
 	blog_feed => $feed->{url},
       }
     } @nodes);
@@ -265,8 +274,10 @@ sub add_data {
     $entry->{author} = $xpc->findvalue('dc:contributor | atom:author/atom:name', $element);
     $entry->{day} = time2str("%Y-%m-%d", $entry->{seconds}, "GMT");
     $entry->{excerpt} = excerpt($xpc, $entry);
-    $entry->{blog_title} = $xpc->findvalue('/rss/channel/title | /atom:feed/atom:title', $element);
     $entry->{blog_link} = $xpc->findvalue('/rss/channel/link | /atom:feed/atom:link[@rel="alternate"][@type="text/html"]/@href', $element);
+    $entry->{feed}->{link} = $entry->{blog_link} if $entry->{blog_link} and not $entry->{feed}->{link};
+    $entry->{blog_title} = $xpc->findvalue('/rss/channel/title | /atom:feed/atom:title', $element);
+    $entry->{feed}->{title} = $entry->{blog_title} if $entry->{blog_title} and not $entry->{feed}->{title};
   }
 }
 
@@ -299,8 +310,6 @@ sub apply_entry_template {
 }
 
 sub apply_page_template {
-  my $entries = shift;
-  my $template = shift;
   my $mnt = Mojo::Template->new;
-  return $mnt->render($template, $entries);
+  return $mnt->render(@_);
 }

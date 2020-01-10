@@ -1,4 +1,4 @@
-% my ($entries) = @_;
+% my ($globals, $feeds, $entries) = @_;
 <!DOCTYPE html>
 <html>
 <head profile="http://www.w3.org/2005/10/profile">
@@ -26,19 +26,14 @@
     <h2><label for="toggle">Members</label></h2>
     <input type="checkbox" id="toggle">
     <ul id="toggled">
-% for my $entry (@$entries) {
-      <li>
-	      <a href="<%= $entry->{blog_feed} =%>">
-					<img src="feed.png" alt="(feed)">
-				</a>
-				<a href="<%= $entry->{blog_link} =%>"><%= $entry->{blog_title} =%></a>
-      </li>
+% for my $feed (@$feeds) {
+      <li><a href="<%= $feed->{url} =%>"><img src="feed.png" alt="(feed)"></a> <% if ($feed->{link}) { %><a href="<%= $feed->{link} =%>"><%= $feed->{title} =%></a><% } else { %><%= $feed->{title} =%><% } %></li>
 % }
     </ul>
     <h2>Info</h2>
     <dl>
       <dt>Last updated:</dt>
-      <dd><span class="date" title="GMT">2020-01-09</span></dd>
+      <dd><span class="date" title="GMT"><%= $globals->{date} %></span></dd>
       <dt>Powered by:</dt>
       <dd><a href="https://alexschroeder.ch/cgit/planet-jupiter/about/" class="jupiter button">Jupiter</a></dd>
       <dt>Export:</dt>
