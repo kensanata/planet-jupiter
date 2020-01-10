@@ -119,7 +119,10 @@ sub main {
 sub update_cache {
   my $feeds = read_opml();
   make_directories($feeds);
-  my $ua = Mojo::UserAgent->new;
+  my $ua = Mojo::UserAgent->new
+      ->connect_timeout(20)
+      ->max_redirects(3)
+      ->request_timeout(20);
   make_promises($ua, $feeds);
   fetch_feeds($feeds);
   save_feed_metadata($feeds);
@@ -132,7 +135,9 @@ sub make_promises {
   for my $feed (@$feeds) {
     my $url = $feed->{url};
     # returning 0 in the case of an error is important
-    $feed->{promise} = $ua->get_p($url)->catch(sub { $feed->{message} = "@_"; 0; });
+    $feed->{promise} = $ua->get_p($url)
+	->catch(sub { $feed->{message} = "@_"; 0; })
+	->finally(sub { say $url });
   }
 }
 
