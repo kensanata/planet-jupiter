@@ -119,10 +119,9 @@ sub main {
 sub update_cache {
   my $feeds = read_opml();
   make_directories($feeds);
-  my $ua = Mojo::UserAgent->new
-      ->connect_timeout(20)
+  my $ua = Mojo::UserAgent->new->with_roles('+Queued')
       ->max_redirects(3)
-      ->request_timeout(20);
+      ->max_active(5);
   make_promises($ua, $feeds);
   fetch_feeds($feeds);
   save_feed_metadata($feeds);
