@@ -52,7 +52,7 @@ CSS file, and a small Javascript snippet to enable navigation using the `J` and
 
 The first reason is that tinkering with the templates involves running the
 program again and again, and you don't want to contact all the sites whenever
-you update your tempaltes.
+you update your templates.
 
 The other reason is that it allows you to create subsets. For example, you can
 fetch the feeds for three different OPML files:
