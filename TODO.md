@@ -1,6 +1,6 @@
 # TODO
 
-- Add categories
+- Add messages for the feeds
 
 - Link to the OPML file(s)
 

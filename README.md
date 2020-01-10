@@ -40,10 +40,27 @@ This is how you generate the `index.html` file based on the feeds of your
 `feed.opml`. It assumes that you have already updated all the feeds (see
 above).
 
-    perl jupiter.pl update feed.opml
+    perl jupiter.pl html feed.opml
 
 The file generation uses two templates, `body.html` for the overall structure
 and `post.html` for each individual post. These are written for
 `Mojo::Template`. The default templates use other files, such as the logo, a
 CSS file, and a small Javascript snippet to enable navigation using the `J` and
 `K` keys.
+
+## Why separate the two steps?
+
+The first reason is that tinkering with the templates involves running the
+program again and again, and you don't want to contact all the sites whenever
+you update your tempaltes.
+
+The other reason is that it allows you to create subsets. For example, you can
+fetch the feeds for three different OPML files:
+
+    perl jupiter.pl update osr.opml indie.opml other.opml
+
+And then you can create three different HTML files:
+
+    perl jupiter.pl html osr.html osr.opml
+    perl jupiter.pl html indie.html indie.opml
+    perl jupiter.pl html rpg.html osr.opml indie.opml other.opml
