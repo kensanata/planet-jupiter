@@ -20,6 +20,7 @@ binmode(STDOUT, ":utf8");
 binmode(STDERR, ":utf8");
 
 use List::Util qw(uniq min);
+use File::Slurp;
 use XML::LibXML;
 use Modern::Perl;
 use Date::Format;
@@ -62,12 +63,30 @@ The directory used to keep a copy of all the feeds in the OPML file has the same
 name as the OPML file but without the .opml extension. In other words, if your
 OPML file is called C<feed.opml> then the cache directory is called C<feed>.
 
+This operation takes long because it requests an update from all the sites
+listed in your OPML file. Don't run it too often or you'll annoy the site
+owners.
+
+=head2 Generate the HTML
+
+This is how you generate the C<index.html> file based on the feeds of your
+C<feed.opml>. It assumes that you have already updated all the feeds (see
+above).
+
+  perl jupiter.pl update feed.opml
+
+The file generation uses two templates, C<body.html> for the overall structure
+and C<post.html> for each individual post. These are written for
+C<Mojo::Template>. The default templates use other files, such as the logo, a
+CSS file, and a small Javascript snippet to enable navigation using the C<J> and
+C<K> keys.
+
 =cut
 
 main();
 
 sub main {
-  my $command = shift @ARGV;
+  my $command = shift @ARGV || 'help';
   if ($command eq 'update') {
     update_cache();
   } elsif ($command eq 'html') {
@@ -108,6 +127,7 @@ sub fetch_feeds {
       # relies on catch returning 0 above
       next unless $tx;
       $feed->{result} = $tx->result;
+      # save raw bytes
       write_file($feed->{cache_file}, $tx->result->body)
 	  or warn "Unable to write $feed->{cache_file}\n";
     }
@@ -164,9 +184,7 @@ sub make_directories {
 sub read_opml {
   my @feeds;
   for my $file (@ARGV) {
-    open my $fh, '<', $file or die "Cannot read $file: $!";
-    binmode $fh;
-    my $doc = XML::LibXML->load_xml(IO => $fh);
+    my $doc = XML::LibXML->load_xml(string => scalar read_file($file, {binmode => ':utf8'}));
     my @nodes = $doc->findnodes('//outline[./@xmlUrl]');
     my $name = fileparse($file, '.opml', '.xml');
     push @feeds, map {
@@ -200,13 +218,9 @@ sub make_html {
   my $entries = entries($xpc, $feeds, 4);
   add_data($xpc, $entries);
   $entries = limit($entries, 100);
-  local $/;
-  my ($page_template, $entry_template) = split("\f", <DATA>);
-  apply_entry_template($entries, $entry_template);
-  my $html = apply_page_template($entries, $page_template);
-  open my $fh, '>:utf8', 'index.html' or die "Cannot write index.html: $!";
-  print $fh $html;
-  close $fh;
+  apply_entry_template($entries, scalar read_file('post.html', {binmode => ':utf8'}));
+  my $html = apply_page_template($entries, scalar read_file('page.html', {binmode => ':utf8'}));
+  write_file('index.html', {binmode => ':utf8'}, $html);
 }
 
 sub entries {
@@ -215,9 +229,8 @@ sub entries {
   my $limit = shift;
   my @entries;
   for my $feed (@$feeds) {
-    open my $fh, '<', $feed->{cache_file} or next;
-    binmode $fh;
-    my $doc = XML::LibXML->load_xml(IO => $fh);
+    next unless -r $feed->{cache_file};
+    my $doc = XML::LibXML->load_xml(string => scalar read_file($feed->{cache_file}, {binmode => ':utf8'}));
     # RSS and Atom! We assume that earlier entries are newer. ｢The Entries in
     # the returned Atom Feed SHOULD be ordered by their "app:edited" property,
     # with the most recently edited Entries coming first in the document order.｣
@@ -286,71 +299,3 @@ sub apply_page_template {
   my $mnt = Mojo::Template->new;
   return $mnt->render($template, $entries);
 }
-
-__DATA__
-% my ($entries) = @_;
-<!DOCTYPE html>
-<html>
-<head profile="http://www.w3.org/2005/10/profile">
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<link rel="shortcut icon" href="jupiter.png" type="image/png"/>
-<link rel="icon" href="jupiter.png" type="image/png"/>
-<link rel="stylesheet" href="default.css" type="text/css"/>
-<title>RPG Planet</title>
-<meta name="robots" content="noindex,nofollow">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="Venus">
-<link rel="alternate" href="https://campaignwiki.org/rpg/atom.xml" title="RPG Planet" type="application/atom+xml">
-<script type="text/javascript" src="personalize.js"> </script></head>
-
-<body>
-  <p class="invisible">
-    <a href="#body">Skip to content</a>
-  <h1>RPG Planet</h1>
-  <div id="sidebar">
-    <p class="logo">
-      <img src="jupiter.svg">
-    <p class="small">
-      <a href="/wiki/Planet/What_is_this%3f">What is this?</a> •
-      <a href="/wiki/Planet/Please_join!">Please join!</a>
-    <h2><label for="toggle">Members</label></h2>
-    <input type="checkbox" id="toggle">
-    <ul id="toggled">
-      <li>...</li>
-    </ul>
-    <h2>Info</h2>
-    <dl>
-      <dt>Last updated:</dt>
-      <dd><span class="date" title="GMT">2020-01-09</span></dd>
-      <dt>Powered by:</dt>
-      <dd><a href="https://alexschroeder.ch/cgit/planet-jupiter/about/" class="jupiter button">Jupiter</a></dd>
-      <dt>Export:</dt>
-      <dd><a href="opml.xml" class="opml button">OPML</a></dd>
-      <dd><a href="atom.xml" class="atom button">Atom</a></dd>
-    </dl>
-  </div>
-  <div id="body">
-% my $day = "";
-% for my $entry (@$entries) {
-% if ($entry->{day} ne $day) {
-%   $day = $entry->{day};
-    <h2 class="date"><%= $entry->{day} =%></h2>
-% }
-%= $entry->{html}
-% }
-    </div>
-  </body>
-</html>
-
-<div class="post">
-  <h3>
-    <a href="<%= $blog_link %>"><%= $blog_title %></a> — <a href="<%= $link %>"><%= $title %></a>
-  </h3>
-  <div class="content">
-    <%= $excerpt %>
-  </div>
-  <div class="permalink">
-    <a href="<%= $link %>" class="permalink">
-    by <%= $author %> at <span class="date" title="GMT"><%= $day %></span></a>
-  </div>
-</div>

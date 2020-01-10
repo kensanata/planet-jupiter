@@ -29,3 +29,21 @@ the feeds linked to in the OPML file and stores them in the cache directory.
 The directory used to keep a copy of all the feeds in the OPML file has the same
 name as the OPML file but without the .opml extension. In other words, if your
 OPML file is called `feed.opml` then the cache directory is called `feed`.
+
+This operation takes long because it requests an update from all the sites
+listed in your OPML file. Don't run it too often or you'll annoy the site
+owners.
+
+## Generate the HTML
+
+This is how you generate the `index.html` file based on the feeds of your
+`feed.opml`. It assumes that you have already updated all the feeds (see
+above).
+
+    perl jupiter.pl update feed.opml
+
+The file generation uses two templates, `body.html` for the overall structure
+and `post.html` for each individual post. These are written for
+`Mojo::Template`. The default templates use other files, such as the logo, a
+CSS file, and a small Javascript snippet to enable navigation using the `J` and
+`K` keys.
