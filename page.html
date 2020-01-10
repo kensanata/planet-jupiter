@@ -26,7 +26,14 @@
     <h2><label for="toggle">Members</label></h2>
     <input type="checkbox" id="toggle">
     <ul id="toggled">
-      <li>...</li>
+% for my $entry (@$entries) {
+      <li>
+	      <a href="<%= $entry->{blog_feed} =%>">
+					<img src="feed.png" alt="(feed)">
+				</a>
+				<a href="<%= $entry->{blog_link} =%>"><%= $entry->{blog_title} =%></a>
+      </li>
+% }
     </ul>
     <h2>Info</h2>
     <dl>

@@ -237,7 +237,12 @@ sub entries {
     my @nodes = $xpc->findnodes(
       "//item[position() <= $limit] | //atom:entry[position() <= $limit]",
       $doc);
-    push(@entries, map { { xml => $_ } } @nodes);
+    push(@entries, map {
+      {
+	xml => $_,
+	blog_feed => $feed->{url},
+      }
+    } @nodes);
   }
   return \@entries;
 }
