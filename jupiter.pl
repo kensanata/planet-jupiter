@@ -359,6 +359,7 @@ sub add_data {
   for my $entry (@$entries) {
     my $element = $entry->{xml};
     $entry->{seconds} = parsedate $xpc->findvalue('pubDate | atom:updated', $element);
+    $entry->{seconds} ||= 0;
     $entry->{title} = $xpc->findvalue('title | atom:title', $element);
     $entry->{link} = $xpc->findvalue('link | atom:link[@rel="alternate"][@type="text/html"]/@href', $element);
     $entry->{author} = $xpc->findvalue('dc:contributor | atom:author/atom:name', $element);
