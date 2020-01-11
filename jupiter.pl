@@ -78,11 +78,19 @@ above).
 
     perl jupiter.pl html feed.opml
 
-The file generation uses two templates, C<body.html> for the overall structure
+The file generation uses two templates, C<page.html> for the overall structure
 and C<post.html> for each individual post. These are written for
 C<Mojo::Template>. The default templates use other files, such as the logo, a
 CSS file, and a small Javascript snippet to enable navigation using the C<J> and
 C<K> keys.
+
+You can specify a different HTML file to generate:
+
+    perl jupiter.pl html your.html feed.opml
+
+In this case, the two templates used have names that are based on the name of
+your HTML file: C<your-page.html> for the overall structure and
+C<your-post.html> for each individual post.
 
 =head2 Why separate the two steps?
 
@@ -227,7 +235,7 @@ sub make_directories {
 # cache_dir and cache_file.
 sub read_opml {
   my (@feeds, @files);
-  for my $file (@ARGV) {
+  for my $file (grep /\.(opml|xml)/, @ARGV) {
     my $doc = XML::LibXML->load_xml(string => scalar read_file($file, {binmode => ':utf8'}));
     my @nodes = $doc->findnodes('//outline[./@xmlUrl]');
     my $name = fileparse($file, '.opml', '.xml');
@@ -256,6 +264,8 @@ sub url_to_file {
 }
 
 sub make_html {
+  my $output = html_file();
+  my ($page_template, $entry_template) = template_files();
   my ($feeds, $files) = read_opml();
   my $globals = globals($files);
   my $xpc = XML::LibXML::XPathContext->new;
@@ -267,9 +277,24 @@ sub make_html {
   load_feed_metadata($feeds); # load messages and codes for feeds
   save_feed_metadata($feeds); # save title and link for feeds
   $entries = limit($entries, 100);
-  apply_entry_template($entries, scalar read_file('post.html', {binmode => ':utf8'}));
-  my $html = apply_page_template(scalar read_file('page.html', {binmode => ':utf8'}), $globals, $feeds, $entries);
-  write_file('index.html', {binmode => ':utf8'}, $html);
+  apply_entry_template(scalar read_file($entry_template, {binmode => ':utf8'}), $entries);
+  my $html = apply_page_template(scalar read_file($page_template, {binmode => ':utf8'}), $globals, $feeds, $entries);
+  write_file($output, {binmode => ':utf8'}, $html);
+}
+
+sub html_file {
+  my ($html) = grep /\.html$/, @ARGV;
+  return $html||'index.html';
+}
+
+sub template_files {
+  my ($html) = grep /\.html$/, @ARGV;
+  return ('page.html', 'post.html') unless $html;
+  my $base = substr($html, 0, -5);
+  my ($page_template, $entry_template) = ("$base-page.html", "$base-post.html");
+  die "Page template $page_template not found\n" unless -r $page_template;
+  die "Entry template $entry_template not found\n" unless -r $entry_template;
+  return ($page_template, $entry_template);
 }
 
 sub globals {
@@ -366,8 +391,8 @@ sub excerpt {
 }
 
 sub apply_entry_template {
-  my $entries = shift;
   my $template = shift;
+  my $entries = shift;
   my $mnt = Mojo::Template->new;
   for my $entry (@$entries) {
     my $html = $mnt->vars(1)->render($template, $entry);
