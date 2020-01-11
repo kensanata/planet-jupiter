@@ -27,7 +27,6 @@ use File::Slurp;
 use XML::LibXML;
 use Modern::Perl;
 use Date::Format;
-use XML::Entities;
 use File::Basename;
 use Mojo::Template;
 use Mojo::UserAgent;
