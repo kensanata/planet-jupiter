@@ -343,7 +343,7 @@ sub add_age_warning {
   my $node = shift;
   my $ninety_days = 7776000; # 90 * 24 * 60 * 60
   my $seconds = parsedate $xpc->findvalue('pubDate | atom:updated', $node);
-  $feed->{message} = "No updates in 90 days" if $seconds > $ninety_days;
+  $feed->{message} = "No updates in 90 days" if not $seconds or $seconds > $ninety_days;
 }
 
 sub limit {
