@@ -109,6 +109,9 @@ And then you can create three different HTML files:
     perl jupiter.pl html indie.html indie.opml
     perl jupiter.pl html rpg.html osr.opml indie.opml other.opml
 
+For an example of how it might look, check out the setup for the planets I run.
+L<https://alexschroeder.ch/cgit/planet/about/>
+
 =cut
 
 main();

@@ -42,11 +42,19 @@ above).
 
     perl jupiter.pl html feed.opml
 
-The file generation uses two templates, `body.html` for the overall structure
+The file generation uses two templates, `page.html` for the overall structure
 and `post.html` for each individual post. These are written for
 `Mojo::Template`. The default templates use other files, such as the logo, a
 CSS file, and a small Javascript snippet to enable navigation using the `J` and
 `K` keys.
+
+You can specify a different HTML file to generate:
+
+    perl jupiter.pl html your.html feed.opml
+
+In this case, the two templates used have names that are based on the name of
+your HTML file: `your-page.html` for the overall structure and
+`your-post.html` for each individual post.
 
 ## Why separate the two steps?
 
@@ -64,3 +72,6 @@ And then you can create three different HTML files:
     perl jupiter.pl html osr.html osr.opml
     perl jupiter.pl html indie.html indie.opml
     perl jupiter.pl html rpg.html osr.opml indie.opml other.opml
+
+For an example of how it might look, check out the setup for the planets I run.
+[https://alexschroeder.ch/cgit/planet/about/](https://alexschroeder.ch/cgit/planet/about/)
