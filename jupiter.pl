@@ -363,7 +363,8 @@ sub add_data {
     $entry->{link} = $xpc->findvalue('link | atom:link[@rel="alternate"][@type="text/html"]/@href', $element);
     $entry->{author} = $xpc->findvalue('dc:contributor | atom:author/atom:name', $element);
     $entry->{day} = time2str("%Y-%m-%d", $entry->{seconds}, "GMT");
-    $entry->{categories} = $xpc->findnodes('category/text() | atom:category/@term', $element);
+    my @categories = map { $_->to_literal } $xpc->findnodes('category | atom:category/@term', $element);
+    $entry->{categories} = @categories ? \@categories : undef;
     $entry->{excerpt} = excerpt($xpc, $entry);
     $entry->{blog_link} = $xpc->findvalue('/rss/channel/link | /atom:feed/atom:link[@rel="alternate"][@type="text/html"]/@href', $element);
     $entry->{feed}->{link} = $entry->{blog_link} if $entry->{blog_link} and not $entry->{feed}->{link};
