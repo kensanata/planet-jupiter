@@ -75,3 +75,75 @@ And then you can create three different HTML files:
 
 For an example of how it might look, check out the setup for the planets I run.
 [https://alexschroeder.ch/cgit/planet/about/](https://alexschroeder.ch/cgit/planet/about/)
+
+## Dependencies
+
+To run Jupiter on Debian: `libmojolicious-perl`, `libjson-perl`,
+`libxml-libxml-perl`, `libfile-slurp-perl`, `libmodern-perl-perl`,
+`libtime-parsedate-perl`, `libtimedate-perl`.
+
+To generate the `README.md` from the source file: `libpod-readme-perl`.
+
+## Writing templates
+
+The page template is called with three hash references: globals, feeds, and
+entries. The keys of these three hash references are documented below.
+
+The technical details of how to write the templates are documented in the man
+page for [Mojo::Template](https://metacpan.org/pod/Mojo::Template).
+
+### Globals
+
+There are not many global keys.
+
+**date** is the the publication date of the HTML page, in ISO date format:
+YYYY-MM-DD.
+
+**files** is the list of OPML files used.
+
+### Writing templates for feeds
+
+Feeds have the following keys available:
+
+**title** is the title of the feed.
+
+**url** is the URL of the feed. This is not the link to the site!
+
+**opml\_file** is the file name where this feed is listed.
+
+**cache\_dir** is the directory where this feed is cached.
+
+**message** is the HTTP status message or other warning or error that we got
+while fetching the feed.
+
+**code** is the HTTP status code we got while fetching the feed.
+
+### Writing templates for entries
+
+Entries have the following keys available:
+
+**title** is the title of the post.
+
+**link** is the URL to the post on the web.
+
+**blog\_title** is the title of the site.
+
+**blog\_link** is the URL for the site on the web.
+
+**author** is the author (or the Dublin Core contributor).
+
+**day** is the publication date, in ISO date format: YYYY-MM-DD.
+
+**excerpt** is the blog content, limited to 500 characters, with paragraph
+separators instead of HTML elements.
+
+**categories** are the categories, a list of strings.
+
+**xml** is for internal use only. It contains the raw feed from which all other
+information is extracted.
+
+**seconds** is for internal use only. It's the publication date in seconds since
+January 1, 1970.
+
+**feed** is for internal use only. It's a reference to the feed this entry
+belongs to.

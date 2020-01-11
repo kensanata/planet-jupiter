@@ -111,6 +111,14 @@ And then you can create three different HTML files:
 For an example of how it might look, check out the setup for the planets I run.
 L<https://alexschroeder.ch/cgit/planet/about/>
 
+=head2 Dependencies
+
+To run Jupiter on Debian: C<libmojolicious-perl>, C<libjson-perl>,
+C<libxml-libxml-perl>, C<libfile-slurp-perl>, C<libmodern-perl-perl>,
+C<libtime-parsedate-perl>, C<libtimedate-perl>.
+
+To generate the C<README.md> from the source file: C<libpod-readme-perl>.
+
 =cut
 
 main();
@@ -233,32 +241,6 @@ sub make_directories {
   }
 }
 
-# Creates list of feeds. Each feed is a hash with keys title, url, opml_file,
-# cache_dir and cache_file.
-sub read_opml {
-  my (@feeds, @files);
-  for my $file (grep /\.(opml|xml)/, @ARGV) {
-    my $doc = XML::LibXML->load_xml(string => scalar read_file($file, {binmode => ':utf8'}));
-    my @nodes = $doc->findnodes('//outline[./@xmlUrl]');
-    my $name = fileparse($file, '.opml', '.xml');
-    push @feeds, map {
-      my $title = $_->getAttribute('title');
-      my $url = $_->getAttribute('xmlUrl');
-      {
-	title => $title,
-	url => $url,
-	opml_file => $file,
-	cache_dir => $name,
-	cache_file => $name . "/" . url_to_file($url),
-      }
-    } @nodes;
-    warn "No feeds found in the OPML file $file\n" unless @nodes;
-    push @files, { file => $file, name => $name };
-  }
-  return \@feeds, \@files if wantarray;
-  return \@feeds;
-}
-
 sub url_to_file {
   my $url = shift;
   $url =~ s/[\/?&:]+/-/g;
@@ -299,11 +281,75 @@ sub template_files {
   return ($page_template, $entry_template);
 }
 
+=head2 Writing templates
+
+The page template is called with three hash references: globals, feeds, and
+entries. The keys of these three hash references are documented below.
+
+The technical details of how to write the templates are documented in the man
+page for L<Mojo::Template>.
+
+=head3 Globals
+
+There are not many global keys.
+
+B<date> is the the publication date of the HTML page, in ISO date format:
+YYYY-MM-DD.
+
+B<files> is the list of OPML files used.
+
+=cut
+
 sub globals {
   my $files = shift;
   my @time = gmtime;
   my $today = strftime("%Y-%m-%d", @time);
   return {date => $today, files => $files};
+}
+
+=head3 Writing templates for feeds
+
+Feeds have the following keys available:
+
+B<title> is the title of the feed.
+
+B<url> is the URL of the feed. This is not the link to the site!
+
+B<opml_file> is the file name where this feed is listed.
+
+B<cache_dir> is the directory where this feed is cached.
+
+B<message> is the HTTP status message or other warning or error that we got
+while fetching the feed.
+
+B<code> is the HTTP status code we got while fetching the feed.
+
+=cut
+
+# Creates list of feeds. Each feed is a hash with keys title, url, opml_file,
+# cache_dir and cache_file.
+sub read_opml {
+  my (@feeds, @files);
+  for my $file (grep /\.(opml|xml)/, @ARGV) {
+    my $doc = XML::LibXML->load_xml(string => scalar read_file($file, {binmode => ':utf8'}));
+    my @nodes = $doc->findnodes('//outline[./@xmlUrl]');
+    my $name = fileparse($file, '.opml', '.xml');
+    push @feeds, map {
+      my $title = $_->getAttribute('title');
+      my $url = $_->getAttribute('xmlUrl');
+      {
+	title => $title,
+	url => $url,
+	opml_file => $file,
+	cache_dir => $name,
+	cache_file => $name . "/" . url_to_file($url),
+      }
+    } @nodes;
+    warn "No feeds found in the OPML file $file\n" unless @nodes;
+    push @files, { file => $file, name => $name };
+  }
+  return \@feeds, \@files if wantarray;
+  return \@feeds;
 }
 
 sub entries {
@@ -354,6 +400,38 @@ sub limit {
   @$entries = sort { $b->{seconds} <=> $a->{seconds} } @$entries;
   return [@$entries[0 .. min($#$entries, $limit - 1)]];
 }
+
+=head3 Writing templates for entries
+
+Entries have the following keys available:
+
+B<title> is the title of the post.
+
+B<link> is the URL to the post on the web.
+
+B<blog_title> is the title of the site.
+
+B<blog_link> is the URL for the site on the web.
+
+B<author> is the author (or the Dublin Core contributor).
+
+B<day> is the publication date, in ISO date format: YYYY-MM-DD.
+
+B<excerpt> is the blog content, limited to 500 characters, with paragraph
+separators instead of HTML elements.
+
+B<categories> are the categories, a list of strings.
+
+B<xml> is for internal use only. It contains the raw feed from which all other
+information is extracted.
+
+B<seconds> is for internal use only. It's the publication date in seconds since
+January 1, 1970.
+
+B<feed> is for internal use only. It's a reference to the feed this entry
+belongs to.
+
+=cut
 
 sub add_data {
   my $xpc = shift;
