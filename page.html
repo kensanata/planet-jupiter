@@ -35,7 +35,7 @@
 %   } elsif ($feed->{message} and (not $feed->{code} or $feed->{code} ne "200")) {
 <a class="message" title="<%= $feed->{message} =%>"><%= $feed->{title} =%></a>
 %   } else {
-%= $feed->{title} . " " . $feed->{message} . " " . $feed->{code}
+%= $feed->{title}
 %   }
 % }
     </ul>
