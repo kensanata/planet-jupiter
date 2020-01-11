@@ -310,8 +310,13 @@ h1 {
     /* show MEMBERS */
     #sidebar h2:first-of-type {
 	display: block;
-	background: #ddd;
+	background-color: #ddd;
 	margin: 0.5em;
 	cursor: pointer;
+    }
+    @media (prefers-color-scheme: dark) {
+	#sidebar h2:first-of-type {
+	    background-color:#222;
+	}
     }
 }
