@@ -220,6 +220,7 @@ sub load_feed_metadata {
   my $files = shift;
   for my $file (@$files) {
     my $name = $file->{name};
+    next unless -r "$name.json";
     my $data = decode_json read_binary("$name.json");
     for my $feed (@$feeds) {
       my $url = $feed->{url};
@@ -423,7 +424,7 @@ sub add_age_warning {
   } else {
     # or no entry found with a modification date bigger than the date given
     for my $entry ($feed->{feed}->entries) {
-      return if DateTime->compare_ignore_floating($entry->modified, $date) >= 1;
+      return if $entry->modified and DateTime->compare_ignore_floating($entry->modified, $date) >= 1;
     }
     $feed->{message} = "No updates in 90 days";
     $feed->{code} = "206"; # partial content
@@ -433,10 +434,7 @@ sub add_age_warning {
 sub limit {
   my $entries = shift;
   my $limit = shift;
-  @$entries = sort { DateTime->compare_ignore_floating(
-		       $a->{entry}->issued,
-		       $b->{entry}->issued)
-  } @$entries;
+  @$entries = sort { $b->{day} cmp $a->{day} } @$entries;
   return [@$entries[0 .. min($#$entries, $limit - 1)]];
 }
 
@@ -478,7 +476,8 @@ sub add_data {
     $entry->{author} = $entry->{entry}->{author}
     || $entry->{entry}->{entry}->{dc}->{contributor}; # hack alert!
     my $date = $entry->{entry}->issued || $entry->{entry}->modified;
-    $entry->{day} = $date->ymd if $date || "Date unknown";
+    $entry->{day} = $date->ymd if $date;
+    $entry->{day} ||= "(no date found)";
     $entry->{categories} = $entry->{entry}->category ? [$entry->{entry}->category] : undef;
     $entry->{excerpt} = excerpt($entry->{entry}->content);
     $entry->{blog_link} = $entry->{feed}->{link};
@@ -491,7 +490,7 @@ sub excerpt {
   my $content = shift; # XML::Feed::Content
   my $body = $content->body;
   return '(no excerpt)' unless $body;
-  my $doc = XML::LibXML->load_html(string => $body);
+  my $doc = XML::LibXML->load_html(recover => 2, string => $body); # suppress errors and warnings!
   return substr($body, 0, 500) unless $doc;
   my $separator = "¶";
   for my $node ($doc->findnodes('//p | //br | //blockquote | //li | //td | //th | //div')) {
