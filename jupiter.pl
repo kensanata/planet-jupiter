@@ -21,7 +21,6 @@ use utf8;
 binmode(STDOUT, ":utf8");
 binmode(STDERR, ":utf8");
 
-use JSON;
 use List::Util qw(uniq min);
 use XML::LibXML;
 use Modern::Perl;
@@ -31,6 +30,7 @@ use File::Basename;
 use Mojo::Template;
 use Mojo::UserAgent;
 use Time::ParseDate;
+use Cpanel::JSON::XS;
 use Pod::Simple::Text;
 
 =head1 Planet Jupiter
