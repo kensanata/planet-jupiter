@@ -3,3 +3,4 @@ test.opml
 test
 *.bak
 *.json
+test-*

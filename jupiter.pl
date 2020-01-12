@@ -134,28 +134,29 @@ use Mojo::UserAgent;
 use Cpanel::JSON::XS;
 use Pod::Simple::Text;
 
-main();
+# Our tests don't want to call main
+__PACKAGE__->main unless caller;
 
 sub main {
   my $command = shift @ARGV || 'help';
   if ($command eq 'update') {
-    update_cache();
+    update_cache(@ARGV);
   } elsif ($command eq 'html') {
-    make_html();
+    make_html(@ARGV);
   } else {
     die "Use pod2text jupiter.pl to read the documentation\n";
   }
 }
 
 sub update_cache {
-  my $feeds = read_opml();
+  my ($feeds, $files) = read_opml(@_);
   make_directories($feeds);
   my $ua = Mojo::UserAgent->new->with_roles('+Queued')
       ->max_redirects(3)
       ->max_active(5);
   make_promises($ua, $feeds);
   fetch_feeds($feeds);
-  save_feed_metadata($feeds);
+  save_feed_metadata($feeds, $files);
   cleanup_cache($feeds);
 }
 
@@ -198,27 +199,35 @@ sub fetch_feeds {
 
 sub save_feed_metadata {
   my $feeds = shift;
-  my %messages = map {
-    $_->{url} =>
-    {
-      title => $_->{title},
-      link => $_->{link},
-      message => $_->{message},
-      code => $_->{code},
-    }
-  } @$feeds;
-  write_binary('messages.json', encode_json \%messages);
+  my $files = shift;
+  for my $file (@$files) {
+    my $name = $file->{name};
+    my %messages = map {
+      $_->{url} =>
+      {
+	title => $_->{title},
+	link => $_->{link},
+	message => $_->{message},
+	code => $_->{code},
+      }
+    } grep { $_->{opml_file} eq $file->{file} } @$feeds;
+    write_binary("$file->{name}.json", encode_json \%messages);
+  }
 }
 
 sub load_feed_metadata {
   my $feeds = shift;
-  my $data = decode_json read_binary('messages.json');
-  for my $feed (@$feeds) {
-    my $url = $feed->{url};
-    $feed->{title} = $data->{$url}->{title} unless $feed->{title};
-    $feed->{link} = $data->{$url}->{link} unless $feed->{link};
-    $feed->{message} = $data->{$url}->{message} unless $feed->{message};
-    $feed->{code} = $data->{$url}->{code} unless $feed->{code};
+  my $files = shift;
+  for my $file (@$files) {
+    my $name = $file->{name};
+    my $data = decode_json read_binary("$name.json");
+    for my $feed (@$feeds) {
+      my $url = $feed->{url};
+      $feed->{title} = $data->{$url}->{title} unless $feed->{title};
+      $feed->{link} = $data->{$url}->{link} unless $feed->{link};
+      $feed->{message} = $data->{$url}->{message} unless $feed->{message};
+      $feed->{code} = $data->{$url}->{code} unless $feed->{code};
+    } grep { $_->{opml_file} eq $file->{file} } @$feeds;
   }
 }
 
@@ -264,14 +273,14 @@ sub url_to_file {
 }
 
 sub make_html {
-  my $output = html_file();
-  my ($page_template, $entry_template) = template_files();
-  my ($feeds, $files) = read_opml();
+  my ($feeds, $files) = read_opml(@_);
+  my $output = html_file(@_);
+  my ($page_template, $entry_template) = template_files(@_);
   my $globals = globals($files);
-  my $entries = entries($feeds, 4); # set messages for feeds, too
+  my $entries = entries($feeds, 4); # set data for feeds, too
   add_data($entries);   # extract data from the xml
-  load_feed_metadata($feeds); # load messages and codes for feeds
-  save_feed_metadata($feeds); # save title and link for feeds
+  load_feed_metadata($feeds, $files); # load messages and codes for feeds
+  save_feed_metadata($feeds, $files); # save title and link for feeds
   $entries = limit($entries, 100);
   apply_entry_template(read_text($entry_template), $entries);
   my $html = apply_page_template(read_text($page_template), $globals, $feeds, $entries);
@@ -279,12 +288,12 @@ sub make_html {
 }
 
 sub html_file {
-  my ($html) = grep /\.html$/, @ARGV;
+  my ($html) = grep /\.html$/, @_;
   return $html||'index.html';
 }
 
 sub template_files {
-  my ($html) = grep /\.html$/, @ARGV;
+  my ($html) = grep /\.html$/, @_;
   return ('page.html', 'post.html') unless $html;
   my $base = substr($html, 0, -5);
   my ($page_template, $entry_template) = ("$base-page.html", "$base-post.html");
@@ -344,10 +353,10 @@ B<feed> is for internal use only. It's the L<XML::Feed>.
 # cache_dir and cache_file.
 sub read_opml {
   my (@feeds, @files);
-  for my $file (grep /\.(opml|xml)/, @ARGV) {
+  for my $file (grep /\.(opml|xml)/, @_) {
     my $doc = XML::LibXML->load_xml(string => read_binary($file));
     my @nodes = $doc->findnodes('//outline[./@xmlUrl]');
-    my $name = fileparse($file, '.opml', '.xml');
+    my ($name, $path) = fileparse($file, '.opml', '.xml');
     push @feeds, map {
       my $title = $_->getAttribute('title');
       my $url = $_->getAttribute('xmlUrl');
@@ -355,15 +364,14 @@ sub read_opml {
 	title => $title,    # title in the OPML file
 	url => $url,        # feed URL in the OPML file
 	opml_file => $file,
-	cache_dir => $name,
-	cache_file => $name . "/" . url_to_file($url),
+	cache_dir => "$path/$name",
+	cache_file => "$path/$name/" . url_to_file($url),
       }
     } @nodes;
     warn "No feeds found in the OPML file $file\n" unless @nodes;
-    push @files, { file => $file, name => $name };
+    push @files, { file => $file, name => "$path/$name" };
   }
-  return \@feeds, \@files if wantarray;
-  return \@feeds;
+  return \@feeds, \@files;
 }
 
 sub entries {
@@ -384,9 +392,10 @@ sub entries {
       next;
     }
     next unless $feed->{feed}->entries;
-    $feed->{title} ||= $feed->{feed}->title;   # title in the feed overrides the title in the OPML
-    $feed->{url} ||= $feed->{feed}->self_link; # self_link in the feed overrides the xmlUrl in the OPML
-    $feed->{link} ||= $feed->{feed}->link;     # link in the feed overrides the link in the OPML
+    # data in the feed overrides data in the OPML file
+    $feed->{title} = $feed->{feed}->title if $feed->{feed}->title;
+    $feed->{url} = $feed->{feed}->self_link if $feed->{feed}->self_link;
+    $feed->{link} = $feed->{feed}->link if $feed->{feed}->link;
     add_age_warning($feed, $date);
     push @entries, map {
       {
@@ -464,13 +473,12 @@ belongs to.
 sub add_data {
   my $entries = shift;
   for my $entry (@$entries) {
-    $entry->{title} = $entry->{entry}->title;
-    $entry->{link} = $entry->{entry}->link;
-    $entry->{author} = $entry->{entry}->{author};
-    $entry->{author} ||= $entry->{entry}->{entry}->{dc}->{contributor}; # hack alert!
+    $entry->{title} = $entry->{entry}->title || "Untitled";
+    $entry->{link} = $entry->{entry}->link || "";
+    $entry->{author} = $entry->{entry}->{author}
+    || $entry->{entry}->{entry}->{dc}->{contributor}; # hack alert!
     my $date = $entry->{entry}->issued || $entry->{entry}->modified;
-    $entry->{day} = $date->ymd if $date;
-    $entry->{day} ||= "Date unknown";
+    $entry->{day} = $date->ymd if $date || "Date unknown";
     $entry->{categories} = $entry->{entry}->category ? [$entry->{entry}->category] : undef;
     $entry->{excerpt} = excerpt($entry->{entry}->content);
     $entry->{blog_link} = $entry->{feed}->{link};
@@ -510,3 +518,5 @@ sub apply_page_template {
   my $mnt = Mojo::Template->new;
   return $mnt->render(@_);
 }
+
+1;
