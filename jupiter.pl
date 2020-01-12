@@ -23,10 +23,10 @@ binmode(STDERR, ":utf8");
 
 use JSON;
 use List::Util qw(uniq min);
-use File::Slurp;
 use XML::LibXML;
 use Modern::Perl;
 use Date::Format;
+use File::Slurper;
 use File::Basename;
 use Mojo::Template;
 use Mojo::UserAgent;
@@ -172,7 +172,7 @@ sub fetch_feeds {
       $feed->{message} = $tx->result->message;
       $feed->{code} = $tx->result->code;
       # save raw bytes
-      write_file($feed->{cache_file}, $tx->result->body)
+      write_binary($feed->{cache_file}, $tx->result->body)
 	  or warn "Unable to write $feed->{cache_file}\n";
     }
   })->catch(sub {
@@ -191,12 +191,12 @@ sub save_feed_metadata {
       code => $_->{code},
     }
   } @$feeds;
-  write_file('messages.json', {binmode => ':utf8'}, encode_json \%messages);
+  write_binary('messages.json', encode_json \%messages);
 }
 
 sub load_feed_metadata {
   my $feeds = shift;
-  my $data = decode_json read_file('messages.json', {binmode => ':utf8'});
+  my $data = decode_json read_binary('messages.json');
   for my $feed (@$feeds) {
     my $url = $feed->{url};
     $feed->{title} = $data->{$url}->{title} unless $feed->{title};
@@ -261,9 +261,9 @@ sub make_html {
   load_feed_metadata($feeds); # load messages and codes for feeds
   save_feed_metadata($feeds); # save title and link for feeds
   $entries = limit($entries, 100);
-  apply_entry_template(scalar read_file($entry_template, {binmode => ':utf8'}), $entries);
-  my $html = apply_page_template(scalar read_file($page_template, {binmode => ':utf8'}), $globals, $feeds, $entries);
-  write_file($output, {binmode => ':utf8'}, $html);
+  apply_entry_template(read_text($entry_template), $entries);
+  my $html = apply_page_template(read_text($page_template), $globals, $feeds, $entries);
+  write_text($output, $html);
 }
 
 sub html_file {
@@ -331,7 +331,7 @@ B<code> is the HTTP status code we got while fetching the feed.
 sub read_opml {
   my (@feeds, @files);
   for my $file (grep /\.(opml|xml)/, @ARGV) {
-    my $doc = XML::LibXML->load_xml(string => scalar read_file($file, {binmode => ':utf8'}));
+    my $doc = XML::LibXML->load_xml(string => read_binary($file));
     my @nodes = $doc->findnodes('//outline[./@xmlUrl]');
     my $name = fileparse($file, '.opml', '.xml');
     push @feeds, map {
@@ -359,7 +359,7 @@ sub entries {
   my @entries;
   for my $feed (@$feeds) {
     next unless -r $feed->{cache_file};
-    my $doc = eval { XML::LibXML->load_xml(string => scalar read_file($feed->{cache_file}, {binmode => ':utf8'})) };
+    my $doc = eval { XML::LibXML->load_xml(string => read_binary($feed->{cache_file})) };
     next unless $doc;
     # RSS and Atom! We assume that earlier entries are newer. ｢The Entries in
     # the returned Atom Feed SHOULD be ordered by their "app:edited" property,
