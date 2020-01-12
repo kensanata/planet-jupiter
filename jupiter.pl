@@ -22,14 +22,14 @@ binmode(STDOUT, ":utf8");
 binmode(STDERR, ":utf8");
 
 use List::Util qw(uniq min);
+use File::Slurper qw(read_binary write_binary read_text write_text);
+
+use XML::Feed;
 use XML::LibXML;
 use Modern::Perl;
-use Date::Format;
-use File::Slurper;
 use File::Basename;
 use Mojo::Template;
 use Mojo::UserAgent;
-use Time::ParseDate;
 use Cpanel::JSON::XS;
 use Pod::Simple::Text;
 
@@ -113,9 +113,9 @@ L<https://alexschroeder.ch/cgit/planet/about/>
 
 =head2 Dependencies
 
-To run Jupiter on Debian: C<libmojolicious-perl>, C<libjson-perl>,
-C<libxml-libxml-perl>, C<libfile-slurp-perl>, C<libmodern-perl-perl>,
-C<libtime-parsedate-perl>, C<libtimedate-perl>.
+To run Jupiter on Debian: C<libmojolicious-perl>, C<libxml-feed-perl>,
+C<libxml-libxml-perl>, C<libfile-slurper-perl>, C<libmodern-perl-perl>,
+C<libcpanel-json-xs-perl>.
 
 To generate the C<README.md> from the source file: C<libpod-readme-perl>.
 
@@ -151,9 +151,12 @@ sub make_promises {
   my $feeds = shift;
   for my $feed (@$feeds) {
     my $url = $feed->{url};
-    # returning 0 in the case of an error is important
     $feed->{promise} = $ua->get_p($url)
-	->catch(sub { $feed->{message} = "@_"; 0; })
+	->catch(sub {
+	  $feed->{message} = "@_";
+	  $feed->{message} = "521";
+	  # returning 0 in the case of an error is important
+	  0; })
 	->finally(sub { say $url });
   }
 }
@@ -172,8 +175,8 @@ sub fetch_feeds {
       $feed->{message} = $tx->result->message;
       $feed->{code} = $tx->result->code;
       # save raw bytes
-      write_binary($feed->{cache_file}, $tx->result->body)
-	  or warn "Unable to write $feed->{cache_file}\n";
+      eval { write_binary($feed->{cache_file}, $tx->result->body) };
+      warn "Unable to write $feed->{cache_file}: $@\n" if $@;
     }
   })->catch(sub {
     warn "Something went wrong: @_";
@@ -252,12 +255,8 @@ sub make_html {
   my ($page_template, $entry_template) = template_files();
   my ($feeds, $files) = read_opml();
   my $globals = globals($files);
-  my $xpc = XML::LibXML::XPathContext->new;
-  $xpc->registerNs('atom', 'http://www.w3.org/2005/Atom');
-  $xpc->registerNs('html', 'http://www.w3.org/1999/xhtml');
-  $xpc->registerNs('dc', 'http://purl.org/dc/elements/1.1/');
-  my $entries = entries($xpc, $feeds, 4); # set messages for feeds, too
-  add_data($xpc, $entries);   # extract data from the xml
+  my $entries = entries($feeds, 4); # set messages for feeds, too
+  add_data($entries);   # extract data from the xml
   load_feed_metadata($feeds); # load messages and codes for feeds
   save_feed_metadata($feeds); # save title and link for feeds
   $entries = limit($entries, 100);
@@ -303,7 +302,7 @@ B<files> is the list of OPML files used.
 sub globals {
   my $files = shift;
   my @time = gmtime;
-  my $today = strftime("%Y-%m-%d", @time);
+  my $today = DateTime->now->ymd;
   return {date => $today, files => $files};
 }
 
@@ -313,7 +312,7 @@ Feeds have the following keys available:
 
 B<title> is the title of the feed.
 
-B<url> is the URL of the feed. This is not the link to the site!
+B<url> is the URL of the feed (RSS or Atom). This is not the link to the site!
 
 B<opml_file> is the file name where this feed is listed.
 
@@ -323,6 +322,8 @@ B<message> is the HTTP status message or other warning or error that we got
 while fetching the feed.
 
 B<code> is the HTTP status code we got while fetching the feed.
+
+B<feed> is for internal use only. It's the L<XML::Feed>.
 
 =cut
 
@@ -338,8 +339,8 @@ sub read_opml {
       my $title = $_->getAttribute('title');
       my $url = $_->getAttribute('xmlUrl');
       {
-	title => $title,
-	url => $url,
+	title => $title,    # title in the OPML file
+	url => $url,        # feed URL in the OPML file
 	opml_file => $file,
 	cache_dir => $name,
 	cache_file => $name . "/" . url_to_file($url),
@@ -353,51 +354,67 @@ sub read_opml {
 }
 
 sub entries {
-  my $xpc = shift;
   my $feeds = shift;
   my $limit = shift;
+  my $date = DateTime->now->subtract( days => 90 ); # compute once
   my @entries;
   for my $feed (@$feeds) {
     next unless -r $feed->{cache_file};
-    my $doc = eval { XML::LibXML->load_xml(string => read_binary($feed->{cache_file})) };
-    next unless $doc;
-    # RSS and Atom! We assume that earlier entries are newer. ｢The Entries in
-    # the returned Atom Feed SHOULD be ordered by their "app:edited" property,
-    # with the most recently edited Entries coming first in the document order.｣
-    my @nodes = $xpc->findnodes(
-      "//item[position() <= $limit] | //atom:entry[position() <= $limit]",
-      $doc);
-    if (@nodes) {
-      push(@entries, map {
-	{
-	  xml => $_,
-	  feed => $feed,
-	  blog_title => $feed->{title},
-	  blog_feed => $feed->{url},
-	}
-      } @nodes);
-      add_age_warning($xpc, $feed, $nodes[0]);
-    } else {
+    $feed->{feed} = XML::Feed->parse($feed->{cache_file});
+    if (not $feed->{feed}) {
+      $feed->{message} = XML::Feed->errstr;
+      $feed->{code} = 422; # unprocessable
+      next;
       $feed->{message} = "Empty feed";
+    } elsif (not $feed->{feed}->entries) {
       $feed->{code} = 204; # no content
+      next;
     }
+    next unless $feed->{feed}->entries;
+    $feed->{title} ||= $feed->{feed}->title;   # title in the feed overrides the title in the OPML
+    $feed->{url} ||= $feed->{feed}->self_link; # self_link in the feed overrides the xmlUrl in the OPML
+    $feed->{link} ||= $feed->{feed}->link;     # link in the feed overrides the link in the OPML
+    add_age_warning($feed, $date);
+    push @entries, map {
+      {
+	entry => $_,
+	feed => $feed,
+	blog_title => $feed->{title},
+	blog_url => $feed->{url},
+	blog_link => $feed->{link},
+      }
+    } ($feed->{feed}->entries)[0 .. min($limit, length($feed->{feed}->entries))];
   }
   return \@entries;
 }
 
 sub add_age_warning {
-  my $xpc = shift;
   my $feed = shift;
-  my $node = shift;
-  my $ninety_days = 7776000; # 90 * 24 * 60 * 60
-  my $seconds = parsedate $xpc->findvalue('pubDate | atom:updated', $node);
-  $feed->{message} = "No updates in 90 days" if not $seconds or $seconds > $ninety_days;
+  my $date = shift;
+  if ($feed->{feed}->modified) {
+    # feed modification date is smaller than the date given
+    if (DateTime->compare_ignore_floating($feed->{feed}->modified, $date) == -1) {
+      $feed->{message} = "No updates in 90 days";
+      $feed->{code} = "206"; # partial content
+      return;
+    }
+  } else {
+    # or no entry found with a modification date bigger than the date given
+    for my $entry ($feed->{feed}->entries) {
+      return if DateTime->compare_ignore_floating($entry->modified, $date) >= 1;
+    }
+    $feed->{message} = "No updates in 90 days";
+    $feed->{code} = "206"; # partial content
+  }
 }
 
 sub limit {
   my $entries = shift;
   my $limit = shift;
-  @$entries = sort { $b->{seconds} <=> $a->{seconds} } @$entries;
+  @$entries = sort { DateTime->compare_ignore_floating(
+		       $a->{entry}->issued,
+		       $b->{entry}->issued)
+  } @$entries;
   return [@$entries[0 .. min($#$entries, $limit - 1)]];
 }
 
@@ -407,11 +424,13 @@ Entries have the following keys available:
 
 B<title> is the title of the post.
 
-B<link> is the URL to the post on the web.
+B<link> is the URL to the post on the web (probably a HTML page).
 
 B<blog_title> is the title of the site.
 
-B<blog_link> is the URL for the site on the web.
+B<blog_link> is the URL for the site on the web (probably a HTML page).
+
+B<blog_url> is the URL for the site's feed (RSS or Atom).
 
 B<author> is the author (or the Dublin Core contributor).
 
@@ -422,11 +441,7 @@ separators instead of HTML elements.
 
 B<categories> are the categories, a list of strings.
 
-B<xml> is for internal use only. It contains the raw feed from which all other
-information is extracted.
-
-B<seconds> is for internal use only. It's the publication date in seconds since
-January 1, 1970.
+B<entry> is for internal use only. It contains the L<XML::Feed::Entry> object.
 
 B<feed> is for internal use only. It's a reference to the feed this entry
 belongs to.
@@ -434,42 +449,38 @@ belongs to.
 =cut
 
 sub add_data {
-  my $xpc = shift;
   my $entries = shift;
   for my $entry (@$entries) {
-    my $element = $entry->{xml};
-    $entry->{seconds} = parsedate $xpc->findvalue('pubDate | atom:updated', $element);
-    $entry->{seconds} ||= 0;
-    $entry->{title} = $xpc->findvalue('title | atom:title', $element);
-    $entry->{link} = $xpc->findvalue('link | atom:link[@rel="alternate"][@type="text/html"]/@href', $element);
-    $entry->{author} = $xpc->findvalue('dc:contributor | atom:author/atom:name', $element);
-    $entry->{day} = time2str("%Y-%m-%d", $entry->{seconds}, "GMT");
-    my @categories = map { $_->to_literal } $xpc->findnodes('category | atom:category/@term', $element);
-    $entry->{categories} = @categories ? \@categories : undef;
-    $entry->{excerpt} = excerpt($xpc, $entry);
-    $entry->{blog_link} = $xpc->findvalue('/rss/channel/link | /atom:feed/atom:link[@rel="alternate"][@type="text/html"]/@href', $element);
-    $entry->{feed}->{link} = $entry->{blog_link} if $entry->{blog_link} and not $entry->{feed}->{link};
-    $entry->{blog_title} = $xpc->findvalue('/rss/channel/title | /atom:feed/atom:title', $element);
-    $entry->{feed}->{title} = $entry->{blog_title} if $entry->{blog_title} and not $entry->{feed}->{title};
+    $entry->{title} = $entry->{entry}->title;
+    $entry->{link} = $entry->{entry}->link;
+    $entry->{author} = $entry->{entry}->{author};
+    $entry->{author} ||= $entry->{entry}->{entry}->{dc}->{contributor}; # hack alert!
+    my $date = $entry->{entry}->issued || $entry->{entry}->modified;
+    $entry->{day} = $date->ymd if $date;
+    $entry->{day} ||= "Date unknown";
+    $entry->{categories} = $entry->{entry}->category ? [$entry->{entry}->category] : undef;
+    $entry->{excerpt} = excerpt($entry->{entry}->content);
+    $entry->{blog_link} = $entry->{feed}->{link};
+    $entry->{blog_title} = $entry->{feed}->{title};
+    $entry->{blog_url} = $entry->{feed}->{title};
   }
 }
 
 sub excerpt {
-  my $xpc = shift;
-  my $entry = shift;
-  my $content = $xpc->findvalue('description | atom:content', $entry->{xml});
-  $content = (eval { XML::LibXML->load_xml(string => $content) }
-	      || eval { XML::LibXML->load_html(string => $content) });
-  return '(no excerpt)' unless $content;
+  my $content = shift; # XML::Feed::Content
+  my $body = $content->body;
+  return '(no excerpt)' unless $body;
+  my $doc = XML::LibXML->load_html(string => $body);
+  return substr($body, 0, 500) unless $doc;
   my $separator = "¶";
-  for my $node ($xpc->findnodes('//p | //br | //blockquote | //li | //td | //th | //div', $content)) {
+  for my $node ($doc->findnodes('//p | //br | //blockquote | //li | //td | //th | //div')) {
     $node->appendTextNode($separator);
   }
-  $content = $content->textContent();
-  $content =~ s/¶¶+/¶/g;
-  $content = substr($content, 0, 500);
-  $content =~ s/¶/<span class="paragraph">¶ <\/span>/g;
-  return $content;
+  my $text = $doc->textContent();
+  $text =~ s/¶(\s*¶)+/¶/g;
+  $text = substr($text, 0, 500);
+  $text =~ s/¶/<span class="paragraph">¶ <\/span>/g;
+  return $text;
 }
 
 sub apply_entry_template {
