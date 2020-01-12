@@ -21,18 +21,6 @@ use utf8;
 binmode(STDOUT, ":utf8");
 binmode(STDERR, ":utf8");
 
-use List::Util qw(uniq min);
-use File::Slurper qw(read_binary write_binary read_text write_text);
-
-use XML::Feed;
-use XML::LibXML;
-use Modern::Perl;
-use File::Basename;
-use Mojo::Template;
-use Mojo::UserAgent;
-use Cpanel::JSON::XS;
-use Pod::Simple::Text;
-
 =head1 Planet Jupiter
 
 This program is used to pull together the latest updates from a bunch of other
@@ -113,13 +101,38 @@ L<https://alexschroeder.ch/cgit/planet/about/>
 
 =head2 Dependencies
 
-To run Jupiter on Debian: C<libmojolicious-perl>, C<libxml-feed-perl>,
-C<libxml-libxml-perl>, C<libfile-slurper-perl>, C<libmodern-perl-perl>,
-C<libcpanel-json-xs-perl>.
+To run Jupiter on Debian:
 
-To generate the C<README.md> from the source file: C<libpod-readme-perl>.
+=over
+
+=item C<libmodern-perl-perl> for L<Modern::Perl>
+
+=item  C<libmojolicious-perl> for L<Mojo::Template> and L<Mojo::UserAgent>
+
+=item C<libxml-feed-perl> for L<XML::Feed>
+
+=item C<libxml-libxml-perl> for L<XML::LibXML>
+
+=item C<libfile-slurper-perl> for L<File::Slurper>
+
+=item C<libcpanel-json-xs-perl> for L<Cpanel::JSON::XS>
+
+=back
+
+To generate the C<README.md> from the source file: C<libpod-markdown-perl>.
 
 =cut
+
+use List::Util qw(uniq min);
+use File::Slurper qw(read_binary write_binary read_text write_text);
+use XML::Feed;
+use XML::LibXML;
+use Modern::Perl;
+use File::Basename;
+use Mojo::Template;
+use Mojo::UserAgent;
+use Cpanel::JSON::XS;
+use Pod::Simple::Text;
 
 main();
 
@@ -282,8 +295,8 @@ sub template_files {
 
 =head2 Writing templates
 
-The page template is called with three hash references: globals, feeds, and
-entries. The keys of these three hash references are documented below.
+The page template is called with three hash references: C<globals>, C<feeds>,
+and C<entries>. The keys of these three hash references are documented below.
 
 The technical details of how to write the templates are documented in the man
 page for L<Mojo::Template>.

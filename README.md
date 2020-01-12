@@ -78,16 +78,21 @@ For an example of how it might look, check out the setup for the planets I run.
 
 ## Dependencies
 
-To run Jupiter on Debian: `libmojolicious-perl`, `libjson-perl`,
-`libxml-libxml-perl`, `libfile-slurp-perl`, `libmodern-perl-perl`,
-`libtime-parsedate-perl`, `libtimedate-perl`.
+To run Jupiter on Debian:
 
-To generate the `README.md` from the source file: `libpod-readme-perl`.
+- `libmodern-perl-perl` for [Modern::Perl](https://metacpan.org/pod/Modern::Perl)
+- `libmojolicious-perl` for [Mojo::Template](https://metacpan.org/pod/Mojo::Template) and [Mojo::UserAgent](https://metacpan.org/pod/Mojo::UserAgent)
+- `libxml-feed-perl` for [XML::Feed](https://metacpan.org/pod/XML::Feed)
+- `libxml-libxml-perl` for [XML::LibXML](https://metacpan.org/pod/XML::LibXML)
+- `libfile-slurper-perl` for [File::Slurper](https://metacpan.org/pod/File::Slurper)
+- `libcpanel-json-xs-perl` for [Cpanel::JSON::XS](https://metacpan.org/pod/Cpanel::JSON::XS)
+
+To generate the `README.md` from the source file: `libpod-markdown-perl`.
 
 ## Writing templates
 
-The page template is called with three hash references: globals, feeds, and
-entries. The keys of these three hash references are documented below.
+The page template is called with three hash references: `globals`, `feeds`,
+and `entries`. The keys of these three hash references are documented below.
 
 The technical details of how to write the templates are documented in the man
 page for [Mojo::Template](https://metacpan.org/pod/Mojo::Template).
@@ -107,7 +112,7 @@ Feeds have the following keys available:
 
 **title** is the title of the feed.
 
-**url** is the URL of the feed. This is not the link to the site!
+**url** is the URL of the feed (RSS or Atom). This is not the link to the site!
 
 **opml\_file** is the file name where this feed is listed.
 
@@ -118,17 +123,21 @@ while fetching the feed.
 
 **code** is the HTTP status code we got while fetching the feed.
 
+**feed** is for internal use only. It's the [XML::Feed](https://metacpan.org/pod/XML::Feed).
+
 ### Writing templates for entries
 
 Entries have the following keys available:
 
 **title** is the title of the post.
 
-**link** is the URL to the post on the web.
+**link** is the URL to the post on the web (probably a HTML page).
 
 **blog\_title** is the title of the site.
 
-**blog\_link** is the URL for the site on the web.
+**blog\_link** is the URL for the site on the web (probably a HTML page).
+
+**blog\_url** is the URL for the site's feed (RSS or Atom).
 
 **author** is the author (or the Dublin Core contributor).
 
@@ -139,11 +148,7 @@ separators instead of HTML elements.
 
 **categories** are the categories, a list of strings.
 
-**xml** is for internal use only. It contains the raw feed from which all other
-information is extracted.
-
-**seconds** is for internal use only. It's the publication date in seconds since
-January 1, 1970.
+**entry** is for internal use only. It contains the [XML::Feed::Entry](https://metacpan.org/pod/XML::Feed::Entry) object.
 
 **feed** is for internal use only. It's a reference to the feed this entry
 belongs to.

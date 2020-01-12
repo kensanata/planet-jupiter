@@ -1,2 +1,2 @@
 README.md: jupiter.pl
-	pod2readme --format markdown $< $@
+	pod2markdown $< $@
