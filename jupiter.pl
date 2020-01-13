@@ -119,6 +119,14 @@ To run Jupiter on Debian:
 
 =back
 
+Unfortunately, L<Mojo::UserAgent::Role::Queued> isn't packaged for Debian.
+Therefore, let's build it and install it as a Debian package.
+
+    sudo apt-get install libmodule-build-tiny-perl
+    sudo apt-get install dh-make-perl
+    sudo dh-make-perl --build --cpan Mojo::UserAgent::Role::Queued
+    dpkg --install libmojo-useragent-role-queued-perl_1.15-1_all.de
+
 To generate the C<README.md> from the source file: C<libpod-markdown-perl>.
 
 =cut
