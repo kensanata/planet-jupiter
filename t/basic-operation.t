@@ -20,41 +20,17 @@ use XML::LibXML;
 use File::Slurper qw(read_binary write_binary);
 use Cpanel::JSON::XS;
 
-require "./jupiter.pl";
-
-my $id = int(rand(1000));
-mkdir("test-$id");
-
-my $port = 10000 + $id;
-
-write_binary("test-$id/rss2sample.opml", <<"EOT");
-<opml version="2.0">
-  <body>
-    <outline title="RSS 2.0 Sample File"
-             xmlUrl="http://127.0.0.1:$port/"/>
-  </body>
-</opml>
-EOT
+do './t/test.pl';
+my ($id, $port) = init();
+save_opml('rss2sample.opml');
 
 my $rss = read_binary("t/rss2sample.xml");
 
-use Mojo::Server::Daemon;
-
-my $daemon = Mojo::Server::Daemon->new(listen => ["http://*:$port"]);
-$daemon->on(request => sub {
-  my ($daemon, $tx) = @_;
-  # Response
-  $tx->res->code(200);
-  $tx->res->headers->content_type('application/xml');
-  $tx->res->body($rss);
-  # Resume transaction
-  $tx->resume;
-});
-$daemon->start;
+start_daemon($rss);
 
 Jupiter::update_cache("test-$id/rss2sample.opml");
 
-$daemon->stop;
+stop_daemon();
 
 ok(-d "test-$id/rss2sample", "Cache was created");
 ok(-f "test-$id/rss2sample/http-127.0.0.1-$port-", "Feed was cached");
@@ -102,4 +78,4 @@ for my $entry ($feed->entries) {
   ok($found, "Found in the feed: " . $entry->id);
 }
 
-done_testing();
+done_testing;
