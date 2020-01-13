@@ -459,7 +459,7 @@ sub entries {
 	blog_url => $feed->{url},
 	blog_link => $feed->{link},
       }
-    } ($feed->{feed}->entries)[0 .. min($limit, length($feed->{feed}->entries) - 1)];
+    } ($feed->{feed}->entries)[0 .. min($limit, $feed->{feed}->entries - 1)];
   }
   return \@entries;
 }

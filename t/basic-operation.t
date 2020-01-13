@@ -83,10 +83,23 @@ ok($doc->findnodes('//a[@class="message"][@title="No feed updates in 90 days"]'
 		   . '[@href="http://liftoff.msfc.nasa.gov/"][text()="Liftoff News"]'),
    "Sidebar site link OK");
 
+my $feed = XML::Feed->parse(\$rss);
+for my $entry ($feed->entries) {
+  my $found = $doc->findnodes('//h3/a[text()="' . ($entry->title||"Untitled") . '"]');
+  ok($found, "Found in the HTML: " . ($entry->title||"Untitled"));
+}
+
 $messages = decode_json read_binary "test-$id/rss2sample.json";
 is($messages->{"http://127.0.0.1:$port/"}->{code}, "206", "HTTP status code is 206");
 is($messages->{"http://127.0.0.1:$port/"}->{message}, "No feed updates in 90 days",
    "HTTP status message says no updates in a long time");
 is($messages->{"http://127.0.0.1:$port/"}->{title}, "Liftoff News", "Title was taken from the feed");
+
+my $generated = XML::Feed->parse("test-$id/rss2sample.xml");
+ok($generated, "A XML file was also generated");
+for my $entry ($feed->entries) {
+  my $found = grep { $entry->id eq $_->id } $generated->entries;
+  ok($found, "Found in the feed: " . $entry->id);
+}
 
 done_testing();
