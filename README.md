@@ -56,6 +56,34 @@ In this case, the two templates used have names that are based on the name of
 your HTML file: `your-page.html` for the overall structure and
 `your-post.html` for each individual post.
 
+## Generate the RSS feed
+
+This happens at the same time as when you generate the HTML. It takes all the
+entries that are being added to the HTML and puts the into a feed. If you don't
+specify an HTML file, it tries to use `feed.rss` as the template for the feed
+and it writes all the entries into a file called `feed.xml`.
+
+If you specify a different HTML file to generate, the RSS feed uses the same
+base name.
+
+    perl jupiter.pl html your.html feed.opml
+
+In this case, the RSS template is `your.rss` and the RSS feed is `your.xml`.
+
+The RSS template should probably be really simple and just contain a `title`
+and a `link` element. Something like the following will do:
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <rss version="2.0">
+    <channel>
+    <title>Old School RPG Planet</title>
+    <link>https://campaignwiki.org/osr</link>
+    </channel>
+    </rss>
+
+For more information, take a look at the RSS 2.0 specification.
+[https://cyber.harvard.edu/rss/rss.html](https://cyber.harvard.edu/rss/rss.html)
+
 ## Why separate the two steps?
 
 The first reason is that tinkering with the templates involves running the
@@ -86,6 +114,7 @@ To run Jupiter on Debian:
 - `libxml-libxml-perl` for [XML::LibXML](https://metacpan.org/pod/XML::LibXML)
 - `libfile-slurper-perl` for [File::Slurper](https://metacpan.org/pod/File::Slurper)
 - `libcpanel-json-xs-perl` for [Cpanel::JSON::XS](https://metacpan.org/pod/Cpanel::JSON::XS)
+- `libdatetime-perl` for [DateTime](https://metacpan.org/pod/DateTime)
 
 Unfortunately, [Mojo::UserAgent::Role::Queued](https://metacpan.org/pod/Mojo::UserAgent::Role::Queued) isn't packaged for Debian.
 Therefore, let's build it and install it as a Debian package.

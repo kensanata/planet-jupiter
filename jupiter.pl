@@ -79,6 +79,34 @@ In this case, the two templates used have names that are based on the name of
 your HTML file: C<your-page.html> for the overall structure and
 C<your-post.html> for each individual post.
 
+=head2 Generate the RSS feed
+
+This happens at the same time as when you generate the HTML. It takes all the
+entries that are being added to the HTML and puts the into a feed. If you don't
+specify an HTML file, it tries to use C<feed.rss> as the template for the feed
+and it writes all the entries into a file called C<feed.xml>.
+
+If you specify a different HTML file to generate, the RSS feed uses the same
+base name.
+
+    perl jupiter.pl html your.html feed.opml
+
+In this case, the RSS template is C<your.rss> and the RSS feed is C<your.xml>.
+
+The RSS template should probably be really simple and just contain a C<title>
+and a C<link> element. Something like the following will do:
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <rss version="2.0">
+    <channel>
+    <title>Old School RPG Planet</title>
+    <link>https://campaignwiki.org/osr</link>
+    </channel>
+    </rss>
+
+For more information, take a look at the RSS 2.0 specification.
+L<https://cyber.harvard.edu/rss/rss.html>
+
 =head2 Why separate the two steps?
 
 The first reason is that tinkering with the templates involves running the
@@ -117,6 +145,8 @@ To run Jupiter on Debian:
 
 =item C<libcpanel-json-xs-perl> for L<Cpanel::JSON::XS>
 
+=item C<libdatetime-perl> for L<DateTime>
+
 =back
 
 Unfortunately, L<Mojo::UserAgent::Role::Queued> isn't packaged for Debian.
@@ -133,6 +163,7 @@ To generate the C<README.md> from the source file: C<libpod-markdown-perl>.
 
 use List::Util qw(uniq min);
 use File::Slurper qw(read_binary write_binary read_text write_text);
+use DateTime;
 use XML::Feed;
 use XML::LibXML;
 use Modern::Perl;
@@ -179,7 +210,8 @@ sub make_promises {
 	  $feed->{message} = "521";
 	  # returning 0 in the case of an error is important
 	  0; })
-	->finally(sub { say $url });
+	# sleeping a second to stop blogger.com from blocking us
+	->finally(sub { say $url; sleep 1; });
   }
 }
 
@@ -219,7 +251,7 @@ sub save_feed_metadata {
 	code => $_->{code},
       }
     } grep { $_->{opml_file} eq $file->{file} } @$feeds;
-    write_binary("$file->{name}.json", encode_json \%messages);
+    write_binary("$file->{path}/$file->{name}.json", encode_json \%messages);
   }
 }
 
@@ -227,9 +259,9 @@ sub load_feed_metadata {
   my $feeds = shift;
   my $files = shift;
   for my $file (@$files) {
-    my $name = $file->{name};
-    next unless -r "$name.json";
-    my $data = decode_json read_binary("$name.json");
+    my $filename = "$file->{path}/$file->{name}";
+    next unless -r "$filename.json";
+    my $data = decode_json read_binary("$filename.json");
     for my $feed (@$feeds) {
       my $url = $feed->{url};
       $feed->{title} = $data->{$url}->{title} unless $feed->{title};
@@ -283,22 +315,34 @@ sub url_to_file {
 
 sub make_html {
   my ($feeds, $files) = read_opml(@_);
-  my $output = html_file(@_);
-  my ($page_template, $entry_template) = template_files(@_);
   my $globals = globals($files);
   my $entries = entries($feeds, 4); # set data for feeds, too
   add_data($entries);   # extract data from the xml
   load_feed_metadata($feeds, $files); # load messages and codes for feeds
   save_feed_metadata($feeds, $files); # save title and link for feeds
   $entries = limit($entries, 100);
+  my ($page_template, $entry_template) = template_files(@_);
   apply_entry_template(read_text($entry_template), $entries);
   my $html = apply_page_template(read_text($page_template), $globals, $feeds, $entries);
-  write_text($output, $html);
+  write_text(html_file(@_), $html);
+  write_binary(rss_file(@_), merged_feed(rss_template_file(@_), $entries));
 }
 
 sub html_file {
   my ($html) = grep /\.html$/, @_;
   return $html||'index.html';
+}
+
+sub rss_file {
+  my ($html) = grep /\.html$/, @_;
+  return 'feed.xml' unless $html;
+  return substr($html, 0, -4) . "xml";
+}
+
+sub rss_template_file {
+  my ($html) = grep /\.html$/, @_;
+  return 'feed.rss' unless $html;
+  return substr($html, 0, -4) . "rss";
 }
 
 sub template_files {
@@ -378,7 +422,7 @@ sub read_opml {
       }
     } @nodes;
     warn "No feeds found in the OPML file $file\n" unless @nodes;
-    push @files, { file => $file, name => "$path/$name" };
+    push @files, { file => $file, path => $path, name => $name };
   }
   return \@feeds, \@files;
 }
@@ -390,7 +434,7 @@ sub entries {
   my @entries;
   for my $feed (@$feeds) {
     next unless -r $feed->{cache_file};
-    $feed->{feed} = XML::Feed->parse($feed->{cache_file});
+    $feed->{feed} = eval { XML::Feed->parse($feed->{cache_file}) }; # ignore all errors
     if (not $feed->{feed}) {
       $feed->{message} = XML::Feed->errstr;
       $feed->{code} = 422; # unprocessable
@@ -405,6 +449,7 @@ sub entries {
     $feed->{title} = $feed->{feed}->title if $feed->{feed}->title;
     $feed->{url} = $feed->{feed}->self_link if $feed->{feed}->self_link;
     $feed->{link} = $feed->{feed}->link if $feed->{feed}->link;
+    $feed->{link} ||= $feed->{feed}->id;
     add_age_warning($feed, $date);
     push @entries, map {
       {
@@ -414,7 +459,7 @@ sub entries {
 	blog_url => $feed->{url},
 	blog_link => $feed->{link},
       }
-    } ($feed->{feed}->entries)[0 .. min($limit, length($feed->{feed}->entries))];
+    } ($feed->{feed}->entries)[0 .. min($limit, length($feed->{feed}->entries) - 1)];
   }
   return \@entries;
 }
@@ -425,16 +470,17 @@ sub add_age_warning {
   if ($feed->{feed}->modified) {
     # feed modification date is smaller than the date given
     if (DateTime->compare_ignore_floating($feed->{feed}->modified, $date) == -1) {
-      $feed->{message} = "No updates in 90 days";
+      $feed->{message} = "No feed updates in 90 days";
       $feed->{code} = "206"; # partial content
       return;
     }
   } else {
     # or no entry found with a modification date bigger than the date given
     for my $entry ($feed->{feed}->entries) {
-      return if $entry->modified and DateTime->compare_ignore_floating($entry->modified, $date) >= 1;
+      return if ($entry->issued and DateTime->compare_ignore_floating($entry->issued, $date) >= 1
+		 or $entry->modified and DateTime->compare_ignore_floating($entry->modified, $date) >= 1);
     }
-    $feed->{message} = "No updates in 90 days";
+    $feed->{message} = "No entry newer than 90 days";
     $feed->{code} = "206"; # partial content
   }
 }
@@ -481,7 +527,7 @@ sub add_data {
   for my $entry (@$entries) {
     $entry->{title} = $entry->{entry}->title || "Untitled";
     $entry->{link} = $entry->{entry}->link || "";
-    $entry->{author} = $entry->{entry}->{author}
+    $entry->{author} = $entry->{entry}->author
     || $entry->{entry}->{entry}->{dc}->{contributor}; # hack alert!
     my $date = $entry->{entry}->issued || $entry->{entry}->modified;
     $entry->{day} = $date->ymd if $date;
@@ -489,6 +535,7 @@ sub add_data {
     $entry->{categories} = $entry->{entry}->category ? [$entry->{entry}->category] : undef;
     $entry->{excerpt} = excerpt($entry->{entry}->content);
     $entry->{blog_link} = $entry->{feed}->{link};
+    say $entry->{feed}->{title} unless $entry->{feed}->{link};
     $entry->{blog_title} = $entry->{feed}->{title};
     $entry->{blog_url} = $entry->{feed}->{title};
   }
@@ -498,7 +545,7 @@ sub excerpt {
   my $content = shift; # XML::Feed::Content
   my $body = $content->body;
   return '(no excerpt)' unless $body;
-  my $doc = XML::LibXML->load_html(recover => 2, string => $body); # suppress errors and warnings!
+  my $doc = eval { XML::LibXML->load_html(recover => 2, string => $body) }; # suppress errors and warnings!
   return substr($body, 0, 500) unless $doc;
   my $separator = "¶";
   for my $node ($doc->findnodes('//p | //br | //blockquote | //li | //td | //th | //div')) {
@@ -524,6 +571,24 @@ sub apply_entry_template {
 sub apply_page_template {
   my $mnt = Mojo::Template->new;
   return $mnt->render(@_);
+}
+
+sub merged_feed {
+  my $template = shift;
+  my $entries = shift;
+  my $feed;
+  if (-f $template) {
+    $feed = XML::Feed->parse($template);
+  } else {
+    $feed = XML::Feed->new('RSS');
+    $feed->link("https://alexschroeder.ch/cgit/planet-jupiter/about");
+    $feed->title("Planet");
+  }
+  $feed->modified(DateTime->now);
+  for my $entry (@$entries) {
+    $feed->add_entry($entry->{entry});
+  }
+  return $feed->as_xml;
 }
 
 1;
