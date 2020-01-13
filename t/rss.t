@@ -79,13 +79,13 @@ my $doc = XML::LibXML->load_html(string => $html);
 # these tests depend on page.html and post.html
 ok($doc->findnodes('//a[@href="http://127.0.0.1:' . $port . '/"]'
 		   . '/img[@src="feed.png"][@alt="(feed)"]'), "Sidebar feed link OK");
-ok($doc->findnodes('//a[@class="message"][@title="No updates in 90 days"]'
+ok($doc->findnodes('//a[@class="message"][@title="No feed updates in 90 days"]'
 		   . '[@href="http://liftoff.msfc.nasa.gov/"][text()="Liftoff News"]'),
    "Sidebar site link OK");
 
 $messages = decode_json read_binary "test-$id/rss2sample.json";
 is($messages->{"http://127.0.0.1:$port/"}->{code}, "206", "HTTP status code is 206");
-is($messages->{"http://127.0.0.1:$port/"}->{message}, "No updates in 90 days",
+is($messages->{"http://127.0.0.1:$port/"}->{message}, "No feed updates in 90 days",
    "HTTP status message says no updates in a long time");
 is($messages->{"http://127.0.0.1:$port/"}->{title}, "Liftoff News", "Title was taken from the feed");
 
