@@ -210,8 +210,8 @@ sub make_promises {
 	  $feed->{message} = "521";
 	  # returning 0 in the case of an error is important
 	  0; })
-	# sleeping a second to stop blogger.com from blocking us
-	->finally(sub { say $url; sleep 1; });
+	# sleeping to stop blogger.com from blocking us
+	->finally(sub { $log->debug($url); sleep 2; });
   }
 }
 

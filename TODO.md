@@ -1,7 +1,5 @@
 # TODO
 
-- Fix message JSON: many feeds have "message":null in the JSON.
-
 - Sort feeds in the OPML
 
 - HTTP caching (save etags and last modified headers, use them when
