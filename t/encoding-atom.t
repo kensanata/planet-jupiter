@@ -14,25 +14,31 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use utf8;
+use Encode;
 use Modern::Perl;
 use Test::More;
 use File::Slurper qw(write_binary read_binary write_text);
 
 do './t/test.pl';
 my ($id, $port) = init();
+save_opml('rss2sample.opml');
 
-write_text("test-$id/rss2sample.opml", <<"EOT");
-<opml version="2.0">
-  <body>
-    <outline title="العربيّة"
-             xmlUrl="http://127.0.0.1:$port/"/>
-  </body>
-</opml>
+my $atom = <<'EOT';
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns='http://www.w3.org/2005/Atom'>
+<updated>2019-12-21T10:08:43.170-08:00</updated>
+<title type='text'>Schröder</title>
+<author><name>Schröder</name><email>noreply@blogger.com</email></author>
+<entry>
+<published>2019-12-21T10:08:00.002-08:00</published>
+<updated>2019-12-21T10:08:43.064-08:00</updated>
+<title type='text'>Schröder &amp; Schröder</title>
+<content type='html'>Hello Schröder!</content>
+</entry>
+</feed>
 EOT
 
-my $rss = read_binary("t/encoding.xml");
-
-start_daemon($rss);
+start_daemon(encode_utf8 $atom);
 
 Jupiter::update_cache("test-$id/rss2sample.opml");
 
@@ -45,7 +51,7 @@ Jupiter::make_html("test-$id/rss2sample.html", "test-$id/rss2sample.opml");
 
 ok(-f "test-$id/rss2sample.html", "HTML was generated");
 my $doc = XML::LibXML->load_html(location => "test-$id/rss2sample.html");
-is($doc->findvalue('//h3/a[position()=2]'), "السّلام عليك", "Encoded item title matches");
+is($doc->findvalue('//h3/a[position()=2]'), "Schröder & Schröder", "Encoded item title matches");
 is($doc->findvalue('//li/a[position()=2]'), "Schröder", "Encoded feed title matches");
 is($doc->findvalue('//h3/a[position()=1]'), "Schröder", "Encoded feed title matches again");
 
