@@ -188,6 +188,7 @@ sub main {
   my ($log_level) = grep /^--log=/, @ARGV;
   $log->level(substr($log_level, 6)) if $log_level;
   my ($command) = grep /^[a-z]+$/, @ARGV;
+  $command ||= 'help';
   if ($command eq 'update') {
     update_cache(@ARGV);
   } elsif ($command eq 'html') {
