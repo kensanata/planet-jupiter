@@ -207,7 +207,7 @@ sub make_promises {
     $feed->{promise} = $ua->get_p($url)
 	->catch(sub {
 	  $feed->{message} = "@_";
-	  $feed->{message} = "521";
+	  $feed->{code} = 521;
 	  # returning 0 in the case of an error is important
 	  0; })
 	# sleeping to stop blogger.com from blocking us
@@ -471,7 +471,7 @@ sub add_age_warning {
     # feed modification date is smaller than the date given
     if (DateTime->compare_ignore_floating($feed->{feed}->modified, $date) == -1) {
       $feed->{message} = "No feed updates in 90 days";
-      $feed->{code} = "206"; # partial content
+      $feed->{code} = 206; # partial content
       return;
     }
   } else {
@@ -481,7 +481,7 @@ sub add_age_warning {
 		 or $entry->modified and DateTime->compare_ignore_floating($entry->modified, $date) >= 1);
     }
     $feed->{message} = "No entry newer than 90 days";
-    $feed->{code} = "206"; # partial content
+    $feed->{code} = 206; # partial content
   }
 }
 
