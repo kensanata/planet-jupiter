@@ -459,7 +459,7 @@ sub entries {
     $feed->{title} = $feed->{feed}->title if $feed->{feed}->title;
     $feed->{url} = $feed->{feed}->self_link if $feed->{feed}->self_link;
     $feed->{link} = $feed->{feed}->link if $feed->{feed}->link;
-    $feed->{link} ||= $feed->{feed}->id;
+    $feed->{link} ||= $feed->{feed}->id || "";
     add_age_warning($feed, $date);
     push @entries, map {
       {
