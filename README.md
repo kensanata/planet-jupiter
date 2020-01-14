@@ -104,6 +104,11 @@ And then you can create three different HTML files:
 For an example of how it might look, check out the setup for the planets I run.
 [https://alexschroeder.ch/cgit/planet/about/](https://alexschroeder.ch/cgit/planet/about/)
 
+## Logging
+
+Use the `--log=LEVEL` to set the log level. Valid values for LEVEL are debug,
+info, warn, error, and fatal.
+
 ## Dependencies
 
 To run Jupiter on Debian:

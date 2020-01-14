@@ -127,6 +127,11 @@ And then you can create three different HTML files:
 For an example of how it might look, check out the setup for the planets I run.
 L<https://alexschroeder.ch/cgit/planet/about/>
 
+=head2 Logging
+
+Use the C<--log=LEVEL> to set the log level. Valid values for LEVEL are debug,
+info, warn, error, and fatal.
+
 =head2 Dependencies
 
 To run Jupiter on Debian:
@@ -161,23 +166,28 @@ To generate the C<README.md> from the source file: C<libpod-markdown-perl>.
 
 =cut
 
-use List::Util qw(uniq min);
-use File::Slurper qw(read_binary write_binary read_text write_text);
+use Cpanel::JSON::XS;
 use DateTime;
-use XML::Feed;
-use XML::LibXML;
-use Modern::Perl;
 use File::Basename;
+use File::Slurper qw(read_binary write_binary read_text write_text);
+use List::Util qw(uniq min);
+use Modern::Perl;
+use Mojo::Log;
 use Mojo::Template;
 use Mojo::UserAgent;
-use Cpanel::JSON::XS;
 use Pod::Simple::Text;
+use XML::Feed;
+use XML::LibXML;
+
+my $log = Mojo::Log->new;
 
 # Our tests don't want to call main
 __PACKAGE__->main unless caller;
 
 sub main {
-  my $command = shift @ARGV || 'help';
+  my ($log_level) = grep /^--log=/, @ARGV;
+  $log->level(substr($log_level, 6)) if $log_level;
+  my ($command) = grep /^[a-z]+$/, @ARGV;
   if ($command eq 'update') {
     update_cache(@ARGV);
   } elsif ($command eq 'html') {
@@ -217,7 +227,7 @@ sub make_promises {
 
 sub fetch_feeds {
   my $feeds = shift;
-  say "Fetching feeds...";
+  $log->info("Fetching feeds...");
   Mojo::Promise->all(map { $_->{promise} } @$feeds)->then(sub {
     # all returns the values in the same order!
     for (my $i = 0; $i < @_; $i++) {
@@ -277,8 +287,8 @@ sub cleanup_cache {
   my %good = map { $_ => 1 } @{cache_files($feeds)};
   my @unused = grep { not $good{$_} } @{existing_files($feeds)};
   if (@unused) {
-    say "Removing unused files from the cache...";
-    foreach (@unused) { say "→ $_" }
+    $log->info("Removing unused files from the cache...");
+    foreach (@unused) { $log->info("→ $_") }
     unlink @unused;
   }
 }
@@ -535,7 +545,6 @@ sub add_data {
     $entry->{categories} = $entry->{entry}->category ? [$entry->{entry}->category] : undef;
     $entry->{excerpt} = excerpt($entry->{entry}->content);
     $entry->{blog_link} = $entry->{feed}->{link};
-    say $entry->{feed}->{title} unless $entry->{feed}->{link};
     $entry->{blog_title} = $entry->{feed}->{title};
     $entry->{blog_url} = $entry->{feed}->{title};
   }
