@@ -465,6 +465,7 @@ sub entries {
       $feed->{code} = 422; # unprocessable
       next;
     }
+    $feed->{doc} = $doc;
     my @nodes = $xpc->findnodes("/rss/channel/item[position() <= $limit] "
 				. " | /atom:feed/atom:entry[position() <= $limit]", $doc);
     if (not @nodes) {
@@ -472,7 +473,6 @@ sub entries {
       $feed->{code} = 204; # no content
       next;
     }
-    $feed->{doc} = $doc;
     add_age_warning($feed, \@nodes, $date);
     push @entries, map {
       {
@@ -565,8 +565,9 @@ sub add_data {
   my $feeds = shift;
   my $entries = shift;
   for my $feed (@$feeds) {
+    next unless $feed->{doc};
     # data in the feed overrides defaults set in the OPML
-    $feed->{title} = $xpc->findvalue('/rss/channel/title | /atom:feed/atom:title', $feed->{doc}) || $feed->{feed} || "";
+    $feed->{title} = $xpc->findvalue('/rss/channel/title | /atom:feed/atom:title', $feed->{doc}) || $feed->{title} || "";
     $feed->{url} = $xpc->findvalue('/atom:feed/atom:link[@rel="self"]/@href', $feed->{doc}) || $feed->{url} || "";
     $feed->{link} = $xpc->findvalue('/rss/channel/link | /atom:feed/atom:link[@rel="alternate"][@type="text/html"]/@href', $feed->{doc}) || $feed->{link} || "";
   }
