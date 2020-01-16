@@ -21,6 +21,9 @@ use utf8;
 binmode(STDOUT, ":utf8");
 binmode(STDERR, ":utf8");
 
+# this option works around https://github.com/davorg/xml-feed/issues/44
+$XML::Atom::ForceUnicode = 1;
+
 =head1 Planet Jupiter
 
 This program is used to pull together the latest updates from a bunch of other
