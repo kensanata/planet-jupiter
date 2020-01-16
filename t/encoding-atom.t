@@ -32,7 +32,7 @@ my $atom = <<'EOT';
 <entry>
 <published>2019-12-21T10:08:00.002-08:00</published>
 <updated>2019-12-21T10:08:43.064-08:00</updated>
-<title type='text'>Schröder &amp; Schröder</title>
+<title type='text'>Fuß</title>
 <content type='html'>Hello Schröder!</content>
 </entry>
 </feed>
@@ -51,7 +51,7 @@ Jupiter::make_html("test-$id/rss2sample.html", "test-$id/rss2sample.opml");
 
 ok(-f "test-$id/rss2sample.html", "HTML was generated");
 my $doc = XML::LibXML->load_html(location => "test-$id/rss2sample.html");
-is($doc->findvalue('//h3/a[position()=2]'), "Schröder & Schröder", "Encoded item title matches");
+is($doc->findvalue('//h3/a[position()=2]'), "Fuß", "Encoded item title matches");
 is($doc->findvalue('//li/a[position()=2]'), "Schröder", "Encoded feed title matches");
 is($doc->findvalue('//h3/a[position()=1]'), "Schröder", "Encoded feed title matches again");
 

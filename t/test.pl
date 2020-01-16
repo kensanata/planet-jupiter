@@ -13,10 +13,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use Modern::Perl;
 use Mojo::Server::Daemon;
 use File::Slurper qw(write_binary);
 
 do './jupiter.pl';
+
+$Jupiter::log->level('warn');
 
 my $id;
 my $port;

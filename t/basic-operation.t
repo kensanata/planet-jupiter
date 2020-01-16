@@ -15,7 +15,6 @@
 
 use Modern::Perl;
 use Test::More;
-use XML::Feed;
 use XML::LibXML;
 use File::Slurper qw(read_binary write_binary);
 use Cpanel::JSON::XS;
@@ -59,10 +58,12 @@ ok($doc->findnodes('//a[@class="message"][@title="No feed updates in 90 days"]'
 		   . '[@href="http://liftoff.msfc.nasa.gov/"][text()="Liftoff News"]'),
    "Sidebar site link OK");
 
-my $feed = XML::Feed->parse(\$rss);
-for my $entry ($feed->entries) {
-  my $found = $doc->findnodes('//h3/a[text()="' . ($entry->title||"Untitled") . '"]');
-  ok($found, "Found in the HTML: " . ($entry->title||"Untitled"));
+my $feed = XML::LibXML->load_xml(string => $rss);
+my @items = $feed->findnodes('//item');
+for my $item (@items) {
+  my $title = $item->findvalue('title');
+  my $found = $doc->findnodes('//h3/a[text()="' . ($title||"Untitled") . '"]');
+  ok($found, "Found in the HTML: " . ($title||"Untitled"));
 }
 
 $messages = decode_json read_binary "test-$id/rss2sample.json";
@@ -71,11 +72,19 @@ is($messages->{"http://127.0.0.1:$port/"}->{message}, "No feed updates in 90 day
    "HTTP status message says no updates in a long time");
 is($messages->{"http://127.0.0.1:$port/"}->{title}, "Liftoff News", "Title was taken from the feed");
 
-my $generated = XML::Feed->parse("test-$id/rss2sample.xml");
+my $generated = XML::LibXML->load_xml(location => "test-$id/rss2sample.xml");
 ok($generated, "A XML file was also generated");
-for my $entry ($feed->entries) {
-  my $found = grep { $entry->id eq $_->id } $generated->entries;
-  ok($found, "Found in the feed: " . $entry->id);
+for my $item (@items) {
+  my $link = $item->findvalue('link');
+  my $title = $item->findvalue('title');
+  if ($link) {
+    my $found = $generated->findnodes("//link[text()='$link']");
+    ok($found, "Found in the feed: $link");
+  }
+  if ($title) {
+    my $found = $generated->findnodes(qq(//title[text()="$title"]));
+    ok($found, "Found in the feed: $title");
+  }
 }
 
 done_testing;
