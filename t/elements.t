@@ -55,4 +55,34 @@ my $doc = XML::LibXML->load_html(location => "test-$id/rss2sample.html");
 is($doc->findvalue('//li/a[position()=2]'), "Elements", "Elements feed title matches");
 is($doc->findvalue('//div[@class="content"]'), "I love the fediverse!", "Encoded content extracted");
 
+
+
+
+my $atom = <<'EOT';
+<?xml version="1.0" encoding='UTF-8'?>
+<feed xmlns='http://www.w3.org/2005/Atom'>
+<updated>2020-01-16T06:11:11.238-08:00</updated>
+<title type='text'>Textual</title>
+<entry>
+<updated>2020-01-15T15:35:52.043-08:00</updated>
+<title type='text'>Snail</title>
+<summary type='text'>
+Snail is best.
+</summary>
+</entry>
+</feed>
+EOT
+
+start_daemon(encode_utf8 $atom);
+
+Jupiter::update_cache("test-$id/rss2sample.opml");
+
+stop_daemon();
+
+Jupiter::make_html("test-$id/rss2sample.html", "test-$id/rss2sample.opml");
+
+ok(-f "test-$id/rss2sample.html", "HTML was generated, again");
+$doc = XML::LibXML->load_html(location => "test-$id/rss2sample.html");
+is($doc->findvalue('//div[@class="content"]'), "\nSnail is best.\n", "Text content extracted");
+
 done_testing;
