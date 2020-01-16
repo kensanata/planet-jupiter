@@ -21,9 +21,6 @@ use utf8;
 binmode(STDOUT, ":utf8");
 binmode(STDERR, ":utf8");
 
-# this option works around https://github.com/davorg/xml-feed/issues/44
-$XML::Atom::ForceUnicode = 1;
-
 =head1 Planet Jupiter
 
 This program is used to pull together the latest updates from a bunch of other
@@ -598,7 +595,7 @@ sub excerpt {
   return '(no excerpt)' unless $content;
   my $doc = (eval { XML::LibXML->load_xml(recover => 2, suppress_errors => 1, string => $content) }
 	     || eval { XML::LibXML->load_html(recover => 2, suppress_errors => 1, string => $content) });
-  if (not $doc) {
+  if (not $doc->documentElement()) {
     # plain text
     my $len = length($content);
     $content = substr($content, 0, 500);
