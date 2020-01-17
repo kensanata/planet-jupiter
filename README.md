@@ -156,7 +156,7 @@ Therefore, let's build it and install it as a Debian package.
     sudo apt-get install libmodule-build-tiny-perl
     sudo apt-get install dh-make-perl
     sudo dh-make-perl --build --cpan Mojo::UserAgent::Role::Queued
-    dpkg --install libmojo-useragent-role-queued-perl_1.15-1_all.de
+    dpkg --install libmojo-useragent-role-queued-perl_1.15-1_all.deb
 
 To generate the `README.md` from the source file: `libpod-markdown-perl`.
 
