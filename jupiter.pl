@@ -595,8 +595,7 @@ sub add_data {
 sub excerpt {
   my $content = shift;
   return '(no excerpt)' unless $content;
-  my $doc = (eval { XML::LibXML->load_xml(recover => 2, suppress_errors => 1, string => $content) }
-	     || eval { XML::LibXML->load_html(recover => 2, suppress_errors => 1, string => $content) });
+  my $doc = eval { XML::LibXML->load_html(recover => 2, string => $content) };
   if (not $doc->documentElement()) {
     # plain text
     my $len = length($content);
@@ -609,6 +608,7 @@ sub excerpt {
     $node->appendTextNode($separator);
   }
   my $text = $doc->textContent();
+  $text =~ s/( +|----+)/ /g;
   $text =~ s/\s*¶(\s*¶)+\s*/¶/g;
   $text =~ s/^¶//g;
   $text =~ s/¶$//g;
