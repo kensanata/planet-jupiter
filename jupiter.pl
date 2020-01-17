@@ -152,6 +152,8 @@ To run Jupiter on Debian:
 
 =item C<libdatetime-format-mail-perl> for L<DateTime::Format::Mail>
 
+=item C<libdatetime-format-iso8601-perl> for L<DateTime::Format::ISO8601>
+
 =item c<libdatetime-format-flexible-perl> for L<DateTime::Format::Flexible>
 
 =back
@@ -171,6 +173,7 @@ To generate the C<README.md> from the source file: C<libpod-markdown-perl>.
 use Cpanel::JSON::XS;
 use DateTime;
 use DateTime::Format::Mail;
+use DateTime::Format::ISO8601;
 use DateTime::Format::Flexible;
 use File::Basename;
 use File::Slurper qw(read_binary write_binary read_text write_text);
@@ -512,7 +515,10 @@ sub updated {
   return unless $node;
   my $date = $xpc->findvalue('pubDate | atom:updated', $node);
   return unless $date;
-  return DateTime::Format::Flexible->parse_datetime($date);
+  return eval {
+    DateTime::Format::ISO8601->parse_datetime($date)
+	|| DateTime::Format::Flexible->parse_datetime($date);
+  }
 }
 
 sub limit {

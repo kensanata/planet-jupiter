@@ -86,7 +86,7 @@ $doc = XML::LibXML->load_html(location => "test-$id/rss2sample.html");
 is($doc->findvalue('//div[@class="content"]'), "\nSnail is best.\n", "Text content extracted");
 ok(!$doc->findvalue('//li/a[@class="message"]'), "Message is empty in the info list");
 
-my $old = DateTime->now->subtract(days => 100);
+my $old = '2018-12-01T04:24:13.964-06:00';
 
 $atom = <<"EOT";
 <?xml version="1.0" encoding='UTF-8'?>
