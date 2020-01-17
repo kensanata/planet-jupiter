@@ -4,5 +4,8 @@ README.md: jupiter.pl
 clean:
 	rm -rf test-*
 
-test:
-	prove t
+jobs ?= 4
+
+test: clean
+	prove -j $(jobs) t
+
