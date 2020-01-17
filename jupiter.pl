@@ -154,6 +154,9 @@ title in the OPML file.
 feeds in the cache are parsed and if a title is provided, it is stored in the
 JSON file and overrides the link in the OPML file.
 
+=item C<if_modified_since> and C<if_none_match> are two headers used for caching
+from the HTTP response that cannot be changed by data in the feed.
+
 =back
 
 If we run into problems downloading a feed, this setup allows us to still link
@@ -243,6 +246,7 @@ sub main {
 sub update_cache {
   my ($feeds, $files) = read_opml(@_);
   make_directories($feeds);
+  load_feed_metadata($feeds, $files);
   my $ua = Mojo::UserAgent->new->with_roles('+Queued')
       ->max_redirects(3)
       ->max_active(5);
@@ -257,6 +261,11 @@ sub make_promises {
   my $feeds = shift;
   for my $feed (@$feeds) {
     my $url = $feed->{url};
+    $ua->on(start => sub {
+      my ($ua, $tx) = @_;
+      $tx->req->headers->if_none_match($feed->{if_none_match}) if ($feed->{if_none_match});
+      $tx->req->headers->if_modified_since($feed->{if_modified_since}) if ($feed->{if_modified_since});
+    });
     $feed->{promise} = $ua->get_p($url)
 	->catch(sub {
 	  $feed->{message} = "@_";
@@ -281,31 +290,15 @@ sub fetch_feeds {
       next unless $tx;
       $feed->{message} = $tx->result->message;
       $feed->{code} = $tx->result->code;
-      # save raw bytes
-      eval { write_binary($feed->{cache_file}, $tx->result->body) };
+      $feed->{if_modified_since} = $tx->result->headers->if_modified_since;
+      $feed->{if_none_match} = $tx->result->headers->etag;
+      # save raw bytes if this is a success
+      eval { write_binary($feed->{cache_file}, $tx->result->body) } if $tx->result->is_success;
       warn "Unable to write $feed->{cache_file}: $@\n" if $@;
     }
   })->catch(sub {
     warn "Something went wrong: @_";
   })->wait;
-}
-
-sub save_feed_metadata {
-  my $feeds = shift;
-  my $files = shift;
-  for my $file (@$files) {
-    my $name = $file->{name};
-    my %messages = map {
-      $_->{url} =>
-      {
-	title => $_->{title},
-	link => $_->{link},
-	message => $_->{message},
-	code => $_->{code},
-      }
-    } grep { $_->{opml_file} eq $file->{file} } @$feeds;
-    write_binary("$file->{path}/$file->{name}.json", encode_json \%messages);
-  }
 }
 
 sub load_feed_metadata {
@@ -317,11 +310,28 @@ sub load_feed_metadata {
     my $data = decode_json read_binary("$filename.json");
     for my $feed (@$feeds) {
       my $url = $feed->{url};
-      $feed->{title} = $data->{$url}->{title} unless $feed->{title};
-      $feed->{link} = $data->{$url}->{link} unless $feed->{link};
-      $feed->{message} = $data->{$url}->{message} unless $feed->{message};
-      $feed->{code} = $data->{$url}->{code} unless $feed->{code};
+      # don't overwrite title from OPML file
+      $feed->{title} = $data->{$url}->{title} if $data->{$url}->{title};
+      # all the other metadata is loaded from the JSON file
+      $feed->{link} = $data->{$url}->{link};
+      $feed->{message} = $data->{$url}->{message};
+      $feed->{code} = $data->{$url}->{code};
+      $feed->{if_modified_since} = $data->{$url}->{if_modified_since};
+      $feed->{if_none_match} = $data->{$url}->{if_none_match};
     } grep { $_->{opml_file} eq $file->{file} } @$feeds;
+  }
+}
+
+sub save_feed_metadata {
+  my $feeds = shift;
+  my $files = shift;
+  for my $file (@$files) {
+    my $name = $file->{name};
+    my %messages = map {
+      my $feed = $_;
+      $feed->{url} => { map { $_ => $feed->{$_} } grep { $feed->{$_} } qw(title link message code if_modified_since if_none_match) };
+    } grep { $_->{opml_file} eq $file->{file} } @$feeds;
+    write_binary("$file->{path}/$file->{name}.json", encode_json \%messages);
   }
 }
 
@@ -368,10 +378,10 @@ sub url_to_file {
 
 sub make_html {
   my ($feeds, $files) = read_opml(@_);
+  load_feed_metadata($feeds, $files); # load messages and codes for feeds
   my $globals = globals($files);
   my $entries = entries($feeds, 4); # set data for feeds, too
   add_data($feeds, $entries);   # extract data from the xml
-  load_feed_metadata($feeds, $files); # load messages and codes for feeds
   save_feed_metadata($feeds, $files); # save title and link for feeds
   $entries = limit($entries, 100);
   my ($page_template, $entry_template) = template_files(@_);
