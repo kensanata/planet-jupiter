@@ -1,7 +1,5 @@
 # TODO
 
-- Sort feeds in the OPML
-
 - HTTP caching (save etags and last modified headers, use them when
   requesting feeds, handle 304 response)
   
