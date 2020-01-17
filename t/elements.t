@@ -83,7 +83,7 @@ Jupiter::make_html("test-$id/rss2sample.html", "test-$id/rss2sample.opml");
 
 ok(-f "test-$id/rss2sample.html", "HTML was generated, again");
 $doc = XML::LibXML->load_html(location => "test-$id/rss2sample.html");
-is($doc->findvalue('//div[@class="content"]'), "\nSnail is best.\n", "Text content extracted");
+is($doc->findvalue('//div[@class="content"]'), "Snail is best.", "Text content extracted");
 ok(!$doc->findvalue('//li/a[@class="message"]'), "Message is empty in the info list");
 
 my $old = '2018-12-01T04:24:13.964-06:00';

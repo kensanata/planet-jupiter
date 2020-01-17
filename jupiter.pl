@@ -629,22 +629,20 @@ sub excerpt {
   my $content = shift;
   return '(no excerpt)' unless $content;
   my $doc = eval { XML::LibXML->load_html(recover => 2, string => $content) };
-  if (not $doc->documentElement()) {
-    # plain text
-    my $len = length($content);
-    $content = substr($content, 0, 500);
-    $content .= "…" if $len > 500;
-    return $content;
-  }
   my $separator = "¶";
   for my $node ($doc->findnodes('//p | //br | //blockquote | //li | //td | //th | //div')) {
     $node->appendTextNode($separator);
   }
   my $text = $doc->textContent();
   $text =~ s/( +|----+)/ /g;
-  $text =~ s/\s*¶(\s*¶)+\s*/¶/g;
-  $text =~ s/^¶//g;
-  $text =~ s/¶$//g;
+  # collapse whitespace and trim
+  $text =~ s/\s+/ /g;
+  $text =~ s/^ //;
+  $text =~ s/ $//;
+  # replace paragraph repeats with their surrounding spaces
+  $text =~ s/ ?¶( ?¶)* ?/¶/g;
+  $text =~ s/^¶//;
+  $text =~ s/¶$//;
   my $len = length($text);
   $text = substr($text, 0, 500);
   $text .= "…" if $len > 500;
