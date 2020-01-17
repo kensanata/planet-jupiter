@@ -154,8 +154,6 @@ To run Jupiter on Debian:
 
 =item C<libdatetime-format-iso8601-perl> for L<DateTime::Format::ISO8601>
 
-=item c<libdatetime-format-flexible-perl> for L<DateTime::Format::Flexible>
-
 =back
 
 Unfortunately, L<Mojo::UserAgent::Role::Queued> isn't packaged for Debian.
@@ -174,7 +172,6 @@ use Cpanel::JSON::XS;
 use DateTime;
 use DateTime::Format::Mail;
 use DateTime::Format::ISO8601;
-use DateTime::Format::Flexible;
 use File::Basename;
 use File::Slurper qw(read_binary write_binary read_text write_text);
 use List::Util qw(uniq min);
@@ -513,12 +510,11 @@ sub add_age_warning {
 sub updated {
   my $node = shift;
   return unless $node;
-  my $date = $xpc->findvalue('pubDate | atom:updated', $node);
-  return unless $date;
-  return eval {
-    DateTime::Format::ISO8601->parse_datetime($date)
-	|| DateTime::Format::Flexible->parse_datetime($date);
-  }
+  my @nodes = $xpc->findnodes('pubDate | atom:updated', $node) or return;
+  my $date = $nodes[0]->textContent;
+  my $dt = eval { DateTime::Format::Mail->parse_datetime($date) }
+  || eval { DateTime::Format::ISO8601->parse_datetime($date) };
+  return $dt;
 }
 
 sub limit {

@@ -23,15 +23,18 @@ do './t/test.pl';
 my ($id, $port) = init();
 save_opml('rss2sample.opml');
 
+use DateTime;
+my $now = DateTime->now;
+
 my $atom = <<'EOT';
 <?xml version='1.0' encoding='UTF-8'?>
 <feed xmlns='http://www.w3.org/2005/Atom'>
-<updated>2019-12-21T10:08:43.170-08:00</updated>
-<title type='text'>Schröder</title>
-<author><name>Schröder</name><email>noreply@blogger.com</email></author>
+<updated>$now</updated>
+<title type='text'>Schröder’s Blog</title>
+<author><name>Alex Schröder</name><email>noreply@blogger.com</email></author>
 <entry>
-<published>2019-12-21T10:08:00.002-08:00</published>
-<updated>2019-12-21T10:08:43.064-08:00</updated>
+<published>$now</published>
+<updated>$now</updated>
 <title type='text'>Fuß</title>
 <content type='html'>Hello Schröder!</content>
 </entry>
@@ -51,8 +54,9 @@ Jupiter::make_html("test-$id/rss2sample.html", "test-$id/rss2sample.opml");
 
 ok(-f "test-$id/rss2sample.html", "HTML was generated");
 my $doc = XML::LibXML->load_html(location => "test-$id/rss2sample.html");
-is($doc->findvalue('//h3/a[position()=2]'), "Fuß", "Encoded item title matches");
-is($doc->findvalue('//li/a[position()=2]'), "Schröder", "Encoded feed title matches");
-is($doc->findvalue('//h3/a[position()=1]'), "Schröder", "Encoded feed title matches again");
+# no message means that this is just the list node text content
+like($doc->findvalue('//li'), qr/Schröder’s Blog/, "Encoded feed title in the info list");
+is($doc->findvalue('//h3/a[position()=1]'), "Schröder’s Blog", "Encoded feed title");
+is($doc->findvalue('//h3/a[position()=2]'), "Fuß", "Encoded item title");
 
 done_testing;
