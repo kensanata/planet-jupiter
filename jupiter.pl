@@ -174,7 +174,7 @@ use DateTime::Format::Mail;
 use DateTime::Format::ISO8601;
 use File::Basename;
 use File::Slurper qw(read_binary write_binary read_text write_text);
-use List::Util qw(uniq min);
+use List::Util qw(uniq min shuffle);
 use Modern::Perl;
 use Mojo::Log;
 use Mojo::Template;
@@ -446,6 +446,7 @@ sub read_opml {
     warn "No feeds found in the OPML file $file\n" unless @nodes;
     push @files, { file => $file, path => $path, name => $name };
   }
+  @feeds = shuffle @feeds;
   return \@feeds, \@files;
 }
 
