@@ -125,6 +125,8 @@ title in the OPML file.
 - `link` is the site's link for humans. When you generate the HTML, the
 feeds in the cache are parsed and if a title is provided, it is stored in the
 JSON file and overrides the link in the OPML file.
+- `last_modified` and `etag` are two headers used for caching
+from the HTTP response that cannot be changed by data in the feed.
 
 If we run into problems downloading a feed, this setup allows us to still link
 to the feeds that aren't working, using their correct names, and describing the
