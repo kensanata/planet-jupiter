@@ -142,10 +142,6 @@ To run Jupiter on Debian:
 
 =item  C<libmojolicious-perl> for L<Mojo::Template> and L<Mojo::UserAgent>
 
-=item C<libdatetime-format-mail-perl> for L<DateTime::Format::Mail>
-
-=item c<libdatetime-format-iso8601-perl> for L<DateTime::Format::ISO8601>
-
 =item C<libxml-libxml-perl> for L<XML::LibXML>
 
 =item C<libfile-slurper-perl> for L<File::Slurper>
@@ -153,6 +149,10 @@ To run Jupiter on Debian:
 =item C<libcpanel-json-xs-perl> for L<Cpanel::JSON::XS>
 
 =item C<libdatetime-perl> for L<DateTime>
+
+=item C<libdatetime-format-mail-perl> for L<DateTime::Format::Mail>
+
+=item c<libdatetime-format-flexible-perl> for L<DateTime::Format::Flexible>
 
 =back
 
@@ -171,7 +171,7 @@ To generate the C<README.md> from the source file: C<libpod-markdown-perl>.
 use Cpanel::JSON::XS;
 use DateTime;
 use DateTime::Format::Mail;
-use DateTime::Format::ISO8601;
+use DateTime::Format::Flexible;
 use File::Basename;
 use File::Slurper qw(read_binary write_binary read_text write_text);
 use List::Util qw(uniq min);
@@ -510,10 +510,9 @@ sub add_age_warning {
 sub updated {
   my $node = shift;
   return unless $node;
-  my $date = $xpc->findvalue('pubDate | updated', $node);
+  my $date = $xpc->findvalue('pubDate | atom:updated', $node);
   return unless $date;
-  return DateTime::Format::Mail->parse_datetime($date)
-      || DateTime::Format::ISO8601->parse_datetime($date);
+  return DateTime::Format::Flexible->parse_datetime($date);
 }
 
 sub limit {
