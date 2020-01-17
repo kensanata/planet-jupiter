@@ -154,7 +154,7 @@ title in the OPML file.
 feeds in the cache are parsed and if a title is provided, it is stored in the
 JSON file and overrides the link in the OPML file.
 
-=item C<if_modified_since> and C<if_none_match> are two headers used for caching
+=item C<last_modified> and C<etag> are two headers used for caching
 from the HTTP response that cannot be changed by data in the feed.
 
 =back
@@ -263,8 +263,8 @@ sub make_promises {
     my $url = $feed->{url};
     $ua->on(start => sub {
       my ($ua, $tx) = @_;
-      $tx->req->headers->if_none_match($feed->{if_none_match}) if ($feed->{if_none_match});
-      $tx->req->headers->if_modified_since($feed->{if_modified_since}) if ($feed->{if_modified_since});
+      $tx->req->headers->if_none_match($feed->{etag}) if ($feed->{etag});
+      $tx->req->headers->if_modified_since($feed->{last_modified}) if ($feed->{last_modified});
     });
     $feed->{promise} = $ua->get_p($url)
 	->catch(sub {
@@ -290,8 +290,8 @@ sub fetch_feeds {
       next unless $tx;
       $feed->{message} = $tx->result->message;
       $feed->{code} = $tx->result->code;
-      $feed->{if_modified_since} = $tx->result->headers->if_modified_since;
-      $feed->{if_none_match} = $tx->result->headers->etag;
+      $feed->{last_modified} = $tx->result->headers->last_modified;
+      $feed->{etag} = $tx->result->headers->etag;
       # save raw bytes if this is a success
       eval { write_binary($feed->{cache_file}, $tx->result->body) } if $tx->result->is_success;
       warn "Unable to write $feed->{cache_file}: $@\n" if $@;
@@ -316,8 +316,8 @@ sub load_feed_metadata {
       $feed->{link} = $data->{$url}->{link};
       $feed->{message} = $data->{$url}->{message};
       $feed->{code} = $data->{$url}->{code};
-      $feed->{if_modified_since} = $data->{$url}->{if_modified_since};
-      $feed->{if_none_match} = $data->{$url}->{if_none_match};
+      $feed->{last_modified} = $data->{$url}->{last_modified};
+      $feed->{etag} = $data->{$url}->{etag};
     } grep { $_->{opml_file} eq $file->{file} } @$feeds;
   }
 }
@@ -329,7 +329,7 @@ sub save_feed_metadata {
     my $name = $file->{name};
     my %messages = map {
       my $feed = $_;
-      $feed->{url} => { map { $_ => $feed->{$_} } grep { $feed->{$_} } qw(title link message code if_modified_since if_none_match) };
+      $feed->{url} => { map { $_ => $feed->{$_} } grep { $feed->{$_} } qw(title link message code last_modified etag) };
     } grep { $_->{opml_file} eq $file->{file} } @$feeds;
     write_binary("$file->{path}/$file->{name}.json", encode_json \%messages);
   }
@@ -341,7 +341,7 @@ sub cleanup_cache {
   my @unused = grep { not $good{$_} } @{existing_files($feeds)};
   if (@unused) {
     $log->info("Removing unused files from the cache...");
-    foreach (@unused) { $log->info("→ $_") }
+    foreach (@unused) { $log->info($_) }
     unlink @unused;
   }
 }
