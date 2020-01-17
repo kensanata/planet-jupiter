@@ -6,17 +6,17 @@
 <link rel="shortcut icon" href="jupiter.png" type="image/png"/>
 <link rel="icon" href="jupiter.png" type="image/png"/>
 <link rel="stylesheet" href="default.css" type="text/css"/>
-<title>RPG Planet</title>
+<title>Planet</title>
 <meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="Venus">
-<link rel="alternate" href="https://campaignwiki.org/rpg/atom.xml" title="RPG Planet" type="application/atom+xml">
+<meta name="generator" content="Jupiter">
+<link rel="alternate" href="https://example.org/atom.xml" title="Planet" type="application/atom+xml">
 <script type="text/javascript" src="personalize.js"> </script></head>
 
 <body>
   <p class="invisible">
     <a href="#body">Skip to content</a>
-  <h1>RPG Planet</h1>
+  <h1>Planet</h1>
   <div id="sidebar">
     <p class="logo">
       <img src="jupiter.svg">
@@ -46,6 +46,7 @@
       <dt>Powered by:</dt>
       <dd><a href="https://alexschroeder.ch/cgit/planet-jupiter/about/" class="jupiter button">Jupiter</a></dd>
       <dt>Export:</dt>
+      <dd><a href="feed.xml" class="feed button">RSS</a></dd>
 % for my $file (@{$globals->{files}}) {
       <dd><a href="<%= $file->{file} %>" class="opml button"><%= $file->{name} %></a></dd>
 % }
