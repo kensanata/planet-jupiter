@@ -65,8 +65,10 @@ like($doc->findvalue('//div[@class="post"][position()=2]/div[@class="permalink"]
 
 ok(-f "test-$id/rss2sample.xml", "XML was generated");
 $doc = XML::LibXML->load_xml(location => "test-$id/rss2sample.xml");
-ok($doc->findvalue('/rss/channel/item/author[text()="Alex"]'), "Alex was listed as an author");
-ok($doc->findvalue('/rss/channel/item/author[text()="Berta"]'), "Berta was listed as an author");
-ok($doc->findvalue('/rss/channel/item/author[text()="Chris"]'), "Chris was listed as an author");
+my $xpc = XML::LibXML::XPathContext->new($doc);
+$xpc->registerNs('dc', 'http://purl.org/dc/elements/1.1/');
+ok($xpc->findvalue('/rss/channel/item/dc:creator[text()="Alex"]'), "Alex was listed as an author");
+ok($xpc->findvalue('/rss/channel/item/dc:creator[text()="Berta"]'), "Berta was listed as an author");
+ok($xpc->findvalue('/rss/channel/item/dc:creator[text()="Chris"]'), "Chris was listed as an author");
 
 done_testing;
