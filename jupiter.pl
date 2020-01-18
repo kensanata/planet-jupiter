@@ -215,6 +215,7 @@ use Mojo::Template;
 use Mojo::UserAgent;
 use Pod::Simple::Text;
 use XML::LibXML;
+use Mojo::Util qw(slugify trim xml_escape html_unescape);
 
 use vars qw($log);
 our $log = Mojo::Log->new;
@@ -258,7 +259,7 @@ sub make_promises {
   my $ua = shift;
   my $feeds = shift;
   for my $feed (@$feeds) {
-    my $url = $feed->{url};
+    my $url = html_unescape $feed->{url}; # undo xml_escape for the request
     $ua->on(start => sub {
       my ($ua, $tx) = @_;
       $tx->req->headers->if_none_match($feed->{etag}) if ($feed->{etag});
@@ -368,12 +369,6 @@ sub make_directories {
   }
 }
 
-sub url_to_file {
-  my $url = shift;
-  $url =~ s/[\/?&:]+/-/g;
-  return $url;
-}
-
 sub make_html {
   my ($feeds, $files) = read_opml(@_);
   load_feed_metadata($feeds, $files); # load messages and codes for feeds
@@ -408,6 +403,11 @@ sub feed_template_file {
   my ($feed, $template) = grep /\.(xml|rss|atom)$/, @_;
   return $template if $template;
   return 'feed.rss';
+}
+
+sub apply_template {
+  my $mnt = Mojo::Template->new;
+  return $mnt->render(@_);
 }
 
 =head2 Writing templates
@@ -468,14 +468,14 @@ sub read_opml {
     my @nodes = $doc->findnodes('//outline[./@xmlUrl]');
     my ($name, $path) = fileparse($file, '.opml', '.xml');
     push @feeds, map {
-      my $title = $_->getAttribute('title');
-      my $url = $_->getAttribute('xmlUrl');
+      my $title = xml_escape $_->getAttribute('title');
+      my $url = xml_escape $_->getAttribute('xmlUrl');
       {
 	title => $title,    # title in the OPML file
 	url => $url,        # feed URL in the OPML file
 	opml_file => $file,
 	cache_dir => "$path/$name",
-	cache_file => "$path/$name/" . url_to_file($url),
+	cache_file => "$path/$name/" . slugify($url),
       }
     } @nodes;
     warn "No feeds found in the OPML file $file\n" unless @nodes;
@@ -494,7 +494,7 @@ sub entries {
     next unless -r $feed->{cache_file};
     my $doc = eval { XML::LibXML->load_xml(recover => 2, location => $feed->{cache_file} )};
     if (not $doc) {
-      $feed->{message} = "Parsing error: $@";
+      $feed->{message} = xml_escape "Parsing error: $@";
       $feed->{code} = 422; # unprocessable
       next;
     }
@@ -511,6 +511,7 @@ sub entries {
       {
 	element => $_,
 	feed => $feed,
+	# these two are already escaped
 	blog_title => $feed->{title},
 	blog_url => $feed->{url},
       }
@@ -598,26 +599,32 @@ belongs to.
 sub add_data {
   my $feeds = shift;
   my $entries = shift;
+  # A note on the use of xml_escape: whenever we get data from the feed itself,
+  # it needs to be escaped if it gets printed into the HTML. For example: the
+  # feed contains a feed title of "Foo &amp; Bar". findvalue returns "Foo &
+  # Bar". When the template inserts the title, however, we want "Foo &amp; Bar",
+  # not "Foo & Bar". Thus: any text we get from the feed needs to be escaped
+  # if there's a chance we're going to print it again.
   for my $feed (@$feeds) {
     next unless $feed->{doc};
-    # data in the feed overrides defaults set in the OPML
-    $feed->{title} = $xpc->findvalue('/rss/channel/title | /atom:feed/atom:title', $feed->{doc}) || $feed->{title} || "";
-    $feed->{url} = $xpc->findvalue('/atom:feed/atom:link[@rel="self"]/@href', $feed->{doc}) || $feed->{url} || "";
-    $feed->{link} = $xpc->findvalue('/rss/channel/link | /atom:feed/atom:link[@rel="alternate"][@type="text/html"]/@href', $feed->{doc}) || $feed->{link} || "";
+    # data in the feed overrides defaults set in the OPML (XML already escaped)
+    $feed->{title} = xml_escape $xpc->findvalue('/rss/channel/title | /atom:feed/atom:title', $feed->{doc}) || $feed->{title} || "";
+    $feed->{url} = xml_escape $xpc->findvalue('/atom:feed/atom:link[@rel="self"]/@href', $feed->{doc}) || $feed->{url} || "";
+    $feed->{link} = xml_escape $xpc->findvalue('/rss/channel/link | /atom:feed/atom:link[@rel="alternate"][@type="text/html"]/@href', $feed->{doc}) || $feed->{link} || "";
   }
   for my $entry (@$entries) {
-    # copy from the feed
+    # copy from the feed (XML is already escaped)
     $entry->{blog_link} = $entry->{feed}->{link};
     $entry->{blog_title} = $entry->{feed}->{title};
     $entry->{blog_url} = $entry->{feed}->{url};
     # parse the elements
     my $element = $entry->{element};
-    $entry->{title} = $xpc->findvalue('title | atom:title', $element) || "Untitled";
-    $entry->{link} = $xpc->findvalue('link | atom:link[@rel="alternate"][@type="text/html"]/@href', $element);
-    $entry->{link} ||= $xpc->findvalue('atom:link/@href', $element) || "";
-    my @authors = map { $_->to_literal } $xpc->findnodes(
+    $entry->{title} = xml_escape $xpc->findvalue('title | atom:title', $element) || "Untitled";
+    $entry->{link} = xml_escape $xpc->findvalue('link | atom:link[@rel="alternate"][@type="text/html"]/@href', $element);
+    $entry->{link} ||= xml_escape $xpc->findvalue('atom:link/@href', $element) || "";
+    my @authors = map { xml_escape $_->to_literal } $xpc->findnodes(
       'author | atom:author/atom:name | atom:contributor/atom:name | dc:creator | dc:contributor', $element);
-    @authors = map { $_->to_literal } $xpc->findnodes(
+    @authors = map { xml_escape $_->to_literal } $xpc->findnodes(
       '/atom:feed/atom:author/atom:name | '
       . '/atom:feed/atom:contributor/atom:name | '
       . '/rss/channel/dc:creator | '
@@ -627,10 +634,11 @@ sub add_data {
     my $date = updated($element);
     $entry->{date} = $date;
     $entry->{day} = $date ? $date->ymd : "(no date found)";
-    my @categories = map { $_->to_literal } $xpc->findnodes('category | atom:category/@term', $element);
+    my @categories = map { xml_escape $_->to_literal } $xpc->findnodes('category | atom:category/@term', $element);
     $entry->{categories} = @categories ? \@categories : undef; # key must exist in the hash
-    $entry->{content} = $xpc->findvalue('description | atom:content | summary | atom:summary', $element);
-    $entry->{excerpt} = excerpt($entry->{content});
+    my $content = $xpc->findvalue('description | atom:content | summary | atom:summary', $element);
+    $entry->{content} = xml_escape $content;
+    $entry->{excerpt} = xml_escape excerpt($content);
   }
 }
 
@@ -646,8 +654,7 @@ sub excerpt {
   $text =~ s/( +|----+)/ /g;
   # collapse whitespace and trim
   $text =~ s/\s+/ /g;
-  $text =~ s/^ //;
-  $text =~ s/ $//;
+  $text = trim $text;
   # replace paragraph repeats with their surrounding spaces
   $text =~ s/ ?¶( ?¶)* ?/¶/g;
   $text =~ s/^¶//;
@@ -657,11 +664,6 @@ sub excerpt {
   $text .= "…" if $len > 500;
   $text =~ s/¶/<span class="paragraph">¶ <\/span>/g;
   return $text;
-}
-
-sub apply_template {
-  my $mnt = Mojo::Template->new;
-  return $mnt->render(@_);
 }
 
 1;

@@ -32,8 +32,8 @@ Jupiter::update_cache("test-$id/rss2sample.opml");
 stop_daemon();
 
 ok(-d "test-$id/rss2sample", "Cache was created");
-ok(-f "test-$id/rss2sample/http-127.0.0.1-$port-", "Feed was cached");
-is(read_binary("test-$id/rss2sample/http-127.0.0.1-$port-"), $rss, "Cached feed matches");
+ok(-f "test-$id/rss2sample/http127001$port", "Feed was cached");
+is(read_binary("test-$id/rss2sample/http127001$port"), $rss, "Cached feed matches");
 ok(-f "test-$id/rss2sample.json", "Messages were cached");
 
 my $messages = decode_json read_binary "test-$id/rss2sample.json";

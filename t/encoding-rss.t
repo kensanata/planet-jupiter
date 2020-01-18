@@ -35,11 +35,13 @@ my $rss = <<'EOT';
 <?xml version="1.0" encoding='UTF-8'?>
 <rss version="2.0">
    <channel>
-      <title>Schröder</title>
+      <title>Foo &amp; Bar</title>
       <link>https://alexschroeder.ch/</link>
       <pubDate>Mon, 13 Jan 2020 23:16:01 +0100</pubDate>
       <item>
          <title>السّلام عليك</title>
+         <link>http://hello/wiki?user=Alex&amp;lang=ar</link>
+         <description>&lt;em&gt;D&amp;D&lt;/em&gt; is not bad!</description>
       </item>
    </channel>
 </rss>
@@ -56,7 +58,14 @@ Jupiter::make_html("test-$id/rss2sample.html", "test-$id/rss2sample.xml", "test-
 ok(-f "test-$id/rss2sample.html", "HTML was generated");
 my $doc = XML::LibXML->load_html(location => "test-$id/rss2sample.html");
 is($doc->findvalue('//h3/a[position()=2]'), "السّلام عليك", "Encoded item title matches");
-is($doc->findvalue('//li/a[position()=2]'), "Schröder", "Encoded feed title matches");
-is($doc->findvalue('//h3/a[position()=1]'), "Schröder", "Encoded feed title matches again");
+is($doc->findvalue('//li/a[position()=2]'), "Foo & Bar", "Encoded feed title matches");
+is($doc->findvalue('//h3/a[position()=1]'), "Foo & Bar", "Encoded feed title matches again");
+is($doc->findvalue('//h3/a[position()=2]/@href'), "http://hello/wiki?user=Alex&lang=ar", "Encoded link matches");
+is($doc->findvalue('//div[@class="content"]'), "D&D is not bad!", "Encoded content matches");
+is($doc->findvalue('//div[@class="content"]'), "D&D is not bad!", "Encoded content matches");
+
+ok(-f "test-$id/rss2sample.xml", "RSS was generated");
+$doc = XML::LibXML->load_xml(location => "test-$id/rss2sample.xml");
+like($doc->findvalue('/rss/channel/item/description'), qr/<em>D&D<\/em> is not bad!/, "Encoded content matches");
 
 done_testing;
