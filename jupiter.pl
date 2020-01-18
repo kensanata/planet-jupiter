@@ -685,14 +685,16 @@ sub merged_feed {
   my $template = shift;
   my $entries = shift;
   my $doc;
+  my $dc = "http://purl.org/dc/elements/1.1/";
   if (-f $template) {
     $doc = XML::LibXML->load_xml(location => $template);
   } else {
-    $doc = XML::LibXML->load_xml(string => <<'EOT');
+    $doc = XML::LibXML->load_xml(string => <<"EOT");
 <?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
+<rss version="2.0" xmlns:dc="$dc">
 <channel>
 <title>Planet</title>
+<description>This is in an aggregate of multiple feeds.</description>
 <link>https://alexschroeder.ch/cgit/planet-jupiter/about</link>
 </channel>
 </rss>
@@ -711,12 +713,15 @@ EOT
       $item->appendTextChild('pubDate', $pubDate);
     }
     for my $author (@{$entry->{authors}}) {
-      $item->appendTextChild('author', $author);
+      $item->addNewChild($dc, 'creator')->appendTextNode($author);
     }
     for my $category (@{$entry->{categories}}) {
       $item->appendTextChild('category', $category);
     }
     $item->appendTextChild('description', $entry->{content});
+    my $source = $item->addNewChild(undef, 'source');
+    $source->setAttribute('url', $entry->{blog_url});
+    $source->appendTextNode($entry->{blog_title});
     $channel->addChild($item);
     $channel->appendTextNode("\n");
   }
