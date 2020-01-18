@@ -621,7 +621,8 @@ sub add_data {
     # parse the elements
     my $element = $entry->{element};
     $entry->{title} = $xpc->findvalue('title | atom:title', $element) || "Untitled";
-    $entry->{link} = $xpc->findvalue('link | atom:link[@rel="alternate"][@type="text/html"]/@href | atom:link/@href', $element) || "";
+    $entry->{link} = $xpc->findvalue('link | atom:link[@rel="alternate"][@type="text/html"]/@href', $element);
+    $entry->{link} ||= $xpc->findvalue('atom:link/@href', $element) || "";
     my @authors = map { $_->to_literal } $xpc->findnodes(
       'author | atom:author/atom:name | atom:contributor/atom:name | dc:creator | dc:contributor', $element);
     @authors = map { $_->to_literal } $xpc->findnodes(
