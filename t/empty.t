@@ -40,10 +40,7 @@ Jupiter::update_cache("test-$id/rss2sample.opml");
 
 stop_daemon();
 
-write_binary "test-$id/rss2sample-page.html", read_binary "page.html";
-write_binary "test-$id/rss2sample-post.html", read_binary "post.html";
-
-Jupiter::make_html("test-$id/rss2sample.html", "test-$id/rss2sample.opml");
+Jupiter::make_html("test-$id/rss2sample.html", "test-$id/rss2sample.xml", "test-$id/rss2sample.opml");
 
 ok(-f "test-$id/rss2sample.html", "HTML was generated");
 my $doc = XML::LibXML->load_html(location => "test-$id/rss2sample.html");

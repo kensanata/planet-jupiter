@@ -57,6 +57,9 @@ This operation takes long because it requests an update from all the sites
 listed in your OPML file. Don't run it too often or you'll annoy the site
 owners.
 
+The OPML file must use the .opml extension. You can update the feeds for
+multiple OPML files in one go.
+
 =head2 Generate the HTML
 
 This is how you generate the C<index.html> file based on the feeds of your
@@ -65,47 +68,42 @@ above).
 
     perl jupiter.pl html feed.opml
 
-The file generation uses two templates, C<page.html> for the overall structure
-and C<post.html> for each individual post. These are written for
-C<Mojo::Template>. The default templates use other files, such as the logo, a
-CSS file, and a small Javascript snippet to enable navigation using the C<J> and
-C<K> keys.
+The file generation uses a template, C<template.html>. It is written for
+C<Mojo::Template>. The default templates use other files, such as the logo, the
+feed icon, a CSS file, and a small Javascript snippet to enable navigation using
+the C<J> and C<K> keys.
 
 You can specify a different HTML file to generate:
 
     perl jupiter.pl html your.html feed.opml
 
-In this case, the two templates used have names that are based on the name of
-your HTML file: C<your-page.html> for the overall structure and
-C<your-post.html> for each individual post.
+If you specify two HTML files, the first is the HTML file to generate and the
+second is the template to use:
+
+    perl jupiter.pl html your.html your-template.html feed.opml
 
 =head2 Generate the RSS feed
 
 This happens at the same time as when you generate the HTML. It takes all the
 entries that are being added to the HTML and puts the into a feed. If you don't
 specify an HTML file, it tries to use C<feed.rss> as the template for the feed
-and it writes all the entries into a file called C<feed.xml>.
+and it writes all the entries into a file called C<feed.xml>. Again, the
+template is written for C<Mojo::Template>.
 
-If you specify a different HTML file to generate, the RSS feed uses the same
-base name.
+You can specify up to two XML, RSS or ATOM files. The first is the name of the
+feed to generate, the second is the template to use:
 
-    perl jupiter.pl html your.html feed.opml
+    perl jupiter.pl html atom.xml template.xml planet.html template.html feed.opml
 
-In this case, the RSS template is C<your.rss> and the RSS feed is C<your.xml>.
+For more information about feeds, take a look at the specifications:
 
-The RSS template should probably be really simple and just contain a C<title>
-and a C<link> element. Something like the following will do:
+=over
 
-    <?xml version="1.0" encoding="UTF-8"?>
-    <rss version="2.0">
-    <channel>
-    <title>Old School RPG Planet</title>
-    <link>https://campaignwiki.org/osr</link>
-    </channel>
-    </rss>
+=item RSS 2.0, L<https://cyber.harvard.edu/rss/rss.html>
 
-For more information, take a look at the RSS 2.0 specification.
-L<https://cyber.harvard.edu/rss/rss.html>
+=item Atom Syndication, L<https://tools.ietf.org/html/rfc4287>
+
+=back
 
 =head2 Why separate the two steps?
 
@@ -384,11 +382,8 @@ sub make_html {
   add_data($feeds, $entries);   # extract data from the xml
   save_feed_metadata($feeds, $files); # save title and link for feeds
   $entries = limit($entries, 100);
-  my ($page_template, $entry_template) = template_files(@_);
-  apply_entry_template(read_text($entry_template), $entries);
-  my $html = apply_page_template(read_text($page_template), $globals, $feeds, $entries);
-  write_text(html_file(@_), $html);
-  write_binary(rss_file(@_), merged_feed(rss_template_file(@_), $entries));
+  write_text(html_file(@_), apply_template(read_text(html_template_file(@_)), $globals, $feeds, $entries));
+  write_text(feed_file(@_), apply_template(read_text(feed_template_file(@_)), $globals, $feeds, $entries));
 }
 
 sub html_file {
@@ -396,26 +391,23 @@ sub html_file {
   return $html||'index.html';
 }
 
-sub rss_file {
-  my ($html) = grep /\.html$/, @_;
-  return 'feed.xml' unless $html;
-  return substr($html, 0, -4) . "xml";
+sub html_template_file {
+  my ($html, $template) = grep /\.html$/, @_;
+  $template ||= 'template.html';
+  die "HTML template $template not found\n" unless -r $template;
+  return $template;
 }
 
-sub rss_template_file {
-  my ($html) = grep /\.html$/, @_;
-  return 'feed.rss' unless $html;
-  return substr($html, 0, -4) . "rss";
+sub feed_file {
+  my ($feed) = grep /\.(xml|rss|atom)$/, @_;
+  return $feed if $feed;
+  return 'feed.xml';
 }
 
-sub template_files {
-  my ($html) = grep /\.html$/, @_;
-  return ('page.html', 'post.html') unless $html;
-  my $base = substr($html, 0, -5);
-  my ($page_template, $entry_template) = ("$base-page.html", "$base-post.html");
-  die "Page template $page_template not found\n" unless -r $page_template;
-  die "Entry template $entry_template not found\n" unless -r $entry_template;
-  return ($page_template, $entry_template);
+sub feed_template_file {
+  my ($feed, $template) = grep /\.(xml|rss|atom)$/, @_;
+  return $template if $template;
+  return 'feed.rss';
 }
 
 =head2 Writing templates
@@ -471,7 +463,7 @@ B<doc> is the L<XML::LibXML::Document>. Could be either Atom or RSS!
 # cache_dir and cache_file.
 sub read_opml {
   my (@feeds, @files);
-  for my $file (grep /\.(opml|xml)/, @_) {
+  for my $file (grep /\.opml/, reverse @_) {
     my $doc = XML::LibXML->load_xml(location => $file); # this better have no errors!
     my @nodes = $doc->findnodes('//outline[./@xmlUrl]');
     my ($name, $path) = fileparse($file, '.opml', '.xml');
@@ -667,66 +659,9 @@ sub excerpt {
   return $text;
 }
 
-sub apply_entry_template {
-  my $template = shift;
-  my $entries = shift;
-  my $mnt = Mojo::Template->new;
-  for my $entry (@$entries) {
-    my $html = $mnt->vars(1)->render($template, $entry);
-    $entry->{html} = $html;
-  }
-}
-
-sub apply_page_template {
+sub apply_template {
   my $mnt = Mojo::Template->new;
   return $mnt->render(@_);
-}
-
-sub merged_feed {
-  my $template = shift;
-  my $entries = shift;
-  my $doc;
-  my $dc = "http://purl.org/dc/elements/1.1/";
-  if (-f $template) {
-    $doc = XML::LibXML->load_xml(location => $template);
-  } else {
-    $doc = XML::LibXML->load_xml(string => <<"EOT");
-<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:dc="$dc">
-<channel>
-<title>Planet</title>
-<description>This is in an aggregate of multiple feeds.</description>
-<link>https://alexschroeder.ch/cgit/planet-jupiter/about</link>
-</channel>
-</rss>
-EOT
-  }
-  my ($channel) = $doc->findnodes('/rss/channel');
-  my $pubDate = DateTime::Format::Mail->format_datetime(DateTime->now);
-  $channel->appendTextChild('pubDate', $pubDate);
-  $channel->appendTextNode("\n");
-  for my $entry (@$entries) {
-    my $item = XML::LibXML::Element->new('item');
-    $item->appendTextChild('title', $entry->{title});
-    $item->appendTextChild('link', $entry->{link});
-    if ($entry->{date}) {
-      $pubDate = DateTime::Format::Mail->format_datetime($entry->{date});
-      $item->appendTextChild('pubDate', $pubDate);
-    }
-    for my $author (@{$entry->{authors}}) {
-      $item->addNewChild($dc, 'creator')->appendTextNode($author);
-    }
-    for my $category (@{$entry->{categories}}) {
-      $item->appendTextChild('category', $category);
-    }
-    $item->appendTextChild('description', $entry->{content});
-    my $source = $item->addNewChild(undef, 'source');
-    $source->setAttribute('url', $entry->{blog_url});
-    $source->appendTextNode($entry->{blog_title});
-    $channel->addChild($item);
-    $channel->appendTextNode("\n");
-  }
-  return $doc->toString();
 }
 
 1;

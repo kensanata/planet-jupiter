@@ -42,16 +42,12 @@ is($messages->{"http://127.0.0.1:$port/"}->{code}, "200", "HTTP status code is 2
 is($messages->{"http://127.0.0.1:$port/"}->{message}, "OK", "HTTP status message is 'OK'");
 is($messages->{"http://127.0.0.1:$port/"}->{title}, "RSS 2.0 Sample File", "Title was taken from the OPML file");
 
-write_binary "test-$id/rss2sample-page.html", read_binary "page.html";
-write_binary "test-$id/rss2sample-post.html", read_binary "post.html";
-
-Jupiter::make_html("test-$id/rss2sample.html", "test-$id/rss2sample.opml");
+Jupiter::make_html("test-$id/rss2sample.html", "test-$id/rss2sample.xml", "test-$id/rss2sample.opml");
 
 ok(-f "test-$id/rss2sample.html", "HTML was generated");
 my $html = read_binary "test-$id/rss2sample.html";
 unlike($html, qr/syntax error at template/, "No syntax errors in the HTML");
 my $doc = XML::LibXML->load_html(string => $html);
-# these tests depend on page.html and post.html
 ok($doc->findnodes('//a[@href="http://127.0.0.1:' . $port . '/"]'
 		   . '/img[@src="feed.png"][@alt="(feed)"]'), "Sidebar feed link OK");
 ok($doc->findnodes('//a[@class="message"][@title="No feed updates in 90 days"]'

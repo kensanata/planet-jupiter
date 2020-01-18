@@ -34,6 +34,9 @@ This operation takes long because it requests an update from all the sites
 listed in your OPML file. Don't run it too often or you'll annoy the site
 owners.
 
+The OPML file must use the .opml extension. You can update the feeds for
+multiple OPML files in one go.
+
 ## Generate the HTML
 
 This is how you generate the `index.html` file based on the feeds of your
@@ -42,47 +45,37 @@ above).
 
     perl jupiter.pl html feed.opml
 
-The file generation uses two templates, `page.html` for the overall structure
-and `post.html` for each individual post. These are written for
-`Mojo::Template`. The default templates use other files, such as the logo, a
-CSS file, and a small Javascript snippet to enable navigation using the `J` and
-`K` keys.
+The file generation uses a template, `template.html`. It is written for
+`Mojo::Template`. The default templates use other files, such as the logo, the
+feed icon, a CSS file, and a small Javascript snippet to enable navigation using
+the `J` and `K` keys.
 
 You can specify a different HTML file to generate:
 
     perl jupiter.pl html your.html feed.opml
 
-In this case, the two templates used have names that are based on the name of
-your HTML file: `your-page.html` for the overall structure and
-`your-post.html` for each individual post.
+If you specify two HTML files, the first is the HTML file to generate and the
+second is the template to use:
+
+    perl jupiter.pl html your.html your-template.html feed.opml
 
 ## Generate the RSS feed
 
 This happens at the same time as when you generate the HTML. It takes all the
 entries that are being added to the HTML and puts the into a feed. If you don't
 specify an HTML file, it tries to use `feed.rss` as the template for the feed
-and it writes all the entries into a file called `feed.xml`.
+and it writes all the entries into a file called `feed.xml`. Again, the
+template is written for `Mojo::Template`.
 
-If you specify a different HTML file to generate, the RSS feed uses the same
-base name.
+You can specify up to two XML, RSS or ATOM files. The first is the name of the
+feed to generate, the second is the template to use:
 
-    perl jupiter.pl html your.html feed.opml
+    perl jupiter.pl html atom.xml template.xml planet.html template.html feed.opml
 
-In this case, the RSS template is `your.rss` and the RSS feed is `your.xml`.
+For more information about feeds, take a look at the specifications:
 
-The RSS template should probably be really simple and just contain a `title`
-and a `link` element. Something like the following will do:
-
-    <?xml version="1.0" encoding="UTF-8"?>
-    <rss version="2.0">
-    <channel>
-    <title>Old School RPG Planet</title>
-    <link>https://campaignwiki.org/osr</link>
-    </channel>
-    </rss>
-
-For more information, take a look at the RSS 2.0 specification.
-[https://cyber.harvard.edu/rss/rss.html](https://cyber.harvard.edu/rss/rss.html)
+- RSS 2.0, [https://cyber.harvard.edu/rss/rss.html](https://cyber.harvard.edu/rss/rss.html)
+- Atom Syndication, [https://tools.ietf.org/html/rfc4287](https://tools.ietf.org/html/rfc4287)
 
 ## Why separate the two steps?
 
