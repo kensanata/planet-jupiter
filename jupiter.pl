@@ -582,7 +582,7 @@ B<blog_link> is the URL for the site on the web (probably a HTML page).
 
 B<blog_url> is the URL for the site's feed (RSS or Atom).
 
-B<author> is the author (or the Dublin Core contributor).
+B<authors> are the authors (or the Dublin Core contributor), a list of strings.
 
 B<date> is the publication date, as a DateTime object.
 
@@ -622,14 +622,20 @@ sub add_data {
     my $element = $entry->{element};
     $entry->{title} = $xpc->findvalue('title | atom:title', $element) || "Untitled";
     $entry->{link} = $xpc->findvalue('link | atom:link[@rel="alternate"][@type="text/html"]/@href', $element) || "";
-    $entry->{author} = $xpc->findvalue(
-      'author | atom:author/atom:name | dc:creator | dc:contributor '
-      . ' | /webMaster | /atom:author/atom:name | /dc:creator | /dc:contributor', $element);
+    my @authors = map { $_->to_literal } $xpc->findnodes(
+      'author | atom:author/atom:name | atom:contributor/atom:name | dc:creator | dc:contributor', $element);
+    @authors = map { $_->to_literal } $xpc->findnodes(
+      '/atom:feed/atom:author/atom:name | '
+      . '/atom:feed/atom:contributor/atom:name | '
+      . '/rss/channel/dc:creator | '
+      . '/rss/channel/dc:contributor | '
+      . '/rss/channel/webMaster ', $element) unless @authors;
+    $entry->{authors} = @authors ? \@authors : undef; # key must exist in the hash
     my $date = updated($element);
     $entry->{date} = $date;
     $entry->{day} = $date ? $date->ymd : "(no date found)";
     my @categories = map { $_->to_literal } $xpc->findnodes('category | atom:category/@term', $element);
-    $entry->{categories} = @categories ? \@categories : undef;
+    $entry->{categories} = @categories ? \@categories : undef; # key must exist in the hash
     $entry->{content} = $xpc->findvalue('description | atom:content | summary | atom:summary', $element);
     $entry->{excerpt} = excerpt($entry->{content});
   }
@@ -703,6 +709,9 @@ EOT
     if ($entry->{date}) {
       $pubDate = DateTime::Format::Mail->format_datetime($entry->{date});
       $item->appendTextChild('pubDate', $pubDate);
+    }
+    for my $author (@{$entry->{authors}}) {
+      $item->appendTextChild('author', $author);
     }
     for my $category (@{$entry->{categories}}) {
       $item->appendTextChild('category', $category);

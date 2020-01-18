@@ -25,8 +25,7 @@ save_opml('rss2sample.opml');
 
 my $rss = <<'EOT';
 <?xml version="1.0" encoding='UTF-8'?>
-<rss version="2.0"
-     xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<rss version="2.0">
   <channel>
     <title>Elements</title>
     <link>https://join.mastodon.org/</link>

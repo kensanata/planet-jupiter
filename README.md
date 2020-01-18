@@ -212,7 +212,7 @@ Entries have the following keys available:
 
 **blog\_url** is the URL for the site's feed (RSS or Atom).
 
-**author** is the author (or the Dublin Core contributor).
+**authors** are the authors (or the Dublin Core contributor), a list of strings.
 
 **date** is the publication date, as a DateTime object.
 
