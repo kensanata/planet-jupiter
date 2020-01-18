@@ -60,6 +60,11 @@ for my $item (@items) {
   my $title = $item->findvalue('title');
   my $found = $doc->findnodes('//h3/a[text()="' . ($title||"Untitled") . '"]');
   ok($found, "Found in the HTML: " . ($title||"Untitled"));
+  my $category = $item->findvalue('category'); # assuming just one per item in the example
+  if ($category) {
+    $found = $doc->findnodes('//div[@class="post"][h3/a[text()="' . ($title||"Untitled") . '"]]/div[@class="categories"]/ul/li[text()="' . $category . '"]');
+    ok($found, "Found in the HTML: $category");
+  }
 }
 
 $messages = decode_json read_binary "test-$id/rss2sample.json";
@@ -72,14 +77,19 @@ my $generated = XML::LibXML->load_xml(location => "test-$id/rss2sample.xml");
 ok($generated, "A XML file was also generated");
 for my $item (@items) {
   my $link = $item->findvalue('link');
-  my $title = $item->findvalue('title');
   if ($link) {
     my $found = $generated->findnodes("//link[text()='$link']");
     ok($found, "Found in the feed: $link");
   }
+  my $title = $item->findvalue('title');
   if ($title) {
     my $found = $generated->findnodes(qq(//title[text()="$title"]));
     ok($found, "Found in the feed: $title");
+  }
+  my $category = $item->findvalue('category'); # assuming just one per item in the example
+  if ($category) {
+    my $found = $generated->findnodes(qq(//item[title[text()="$title"]]/category[text()="$category"]));
+    ok($found, "Found in the feed: $category");
   }
 }
 
