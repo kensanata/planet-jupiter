@@ -414,6 +414,8 @@ sub apply_template {
 
 The page template is called with three hash references: C<globals>, C<feeds>,
 and C<entries>. The keys of these three hash references are documented below.
+The values of these hashes are all I<escaped HTML> except where noted (dates and
+file names, for example).
 
 The technical details of how to write the templates are documented in the man
 page for L<Mojo::Template>.
@@ -584,7 +586,10 @@ B<day> is the publication date, in ISO date format: YYYY-MM-DD.
 B<content> is the full post content, as string or encoded HTML.
 
 B<excerpt> is the post content, limited to 500 characters, with paragraph
-separators instead of HTML elements, as HTML.
+separators instead of HTML elements, as HTML. It is not encoded because the idea
+is that it only gets added to the HTML and not to the feed, and the HTML it
+contains is very controlled (only the pilcrow sign inside a span to indicate
+paragraph breaks).
 
 B<categories> are the categories, a list of strings.
 
@@ -638,7 +643,7 @@ sub add_data {
     $entry->{categories} = @categories ? \@categories : undef; # key must exist in the hash
     my $content = $xpc->findvalue('description | atom:content | summary | atom:summary', $element);
     $entry->{content} = xml_escape $content;
-    $entry->{excerpt} = xml_escape excerpt($content);
+    $entry->{excerpt} = excerpt($content);
   }
 }
 
@@ -662,6 +667,7 @@ sub excerpt {
   my $len = length($text);
   $text = substr($text, 0, 500);
   $text .= "…" if $len > 500;
+  $text = xml_escape $text;
   $text =~ s/¶/<span class="paragraph">¶ <\/span>/g;
   return $text;
 }
