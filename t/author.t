@@ -36,10 +36,12 @@ my $rss = <<'EOT';
       <description>Wikis are collaborative things.</description>
       <author>Alex</author>
       <author>Berta</author>
+      <pubDate>Sun, 19 Jan 2020 13:48:14 +0100</pubDate>
     </item>
     <item>
       <title>Anonymous</title>
       <description>Nothing here.</description>
+      <pubDate>Sun, 19 Jan 2020 13:48:13 +0100</pubDate>
     </item>
   </channel>
 </rss>

@@ -225,6 +225,8 @@ $xpc->registerNs('atom', 'http://www.w3.org/2005/Atom');
 $xpc->registerNs('html', 'http://www.w3.org/1999/xhtml');
 $xpc->registerNs('dc', 'http://purl.org/dc/elements/1.1/');
 
+my $undefined_date = DateTime->from_epoch( epoch => 0 );
+
 # Our tests don't want to call main
 __PACKAGE__->main unless caller;
 
@@ -465,7 +467,7 @@ B<doc> is the L<XML::LibXML::Document>. Could be either Atom or RSS!
 # cache_dir and cache_file.
 sub read_opml {
   my (@feeds, @files);
-  for my $file (grep /\.opml/, reverse @_) {
+  for my $file (grep /\.opml/, @_) {
     my $doc = XML::LibXML->load_xml(location => $file); # this better have no errors!
     my @nodes = $doc->findnodes('//outline[./@xmlUrl]');
     my ($name, $path) = fileparse($file, '.opml', '.xml');
@@ -501,30 +503,38 @@ sub entries {
       next;
     }
     $feed->{doc} = $doc;
-    my @nodes = $xpc->findnodes("/rss/channel/item[position() <= $limit] "
-				. " | /atom:feed/atom:entry[position() <= $limit]", $doc);
+    my @nodes = $xpc->findnodes("/rss/channel/item | /atom:feed/atom:entry", $doc);
     if (not @nodes) {
       $feed->{message} = "Empty feed";
       $feed->{code} = 204; # no content
       next;
     }
-    add_age_warning($feed, \@nodes, $date);
-    push @entries, map {
-      {
-	element => $_,
-	feed => $feed,
-	# these two are already escaped
-	blog_title => $feed->{title},
-	blog_url => $feed->{url},
-      }
+    # if this is an Atom feed, we need to sort the entries ourselves (older entries at the end)
+    my @candidates = map {
+      my $entry = {};
+      $entry->{element} = $_;
+      $entry->{id} = id($_);
+      $entry->{date} = updated($_) || $undefined_date;
+      $entry;
     } @nodes;
+    @candidates = unique(sort { DateTime->compare( $b->{date}, $a->{date} ) } @candidates);
+    @candidates = @candidates[0 .. min($#candidates, $limit - 1)];
+    # now that we have limited the candidates, let's add more metadata from the feed
+    for my $entry (@candidates) {
+      $entry->{feed} = $feed;
+      # these two are already escaped
+      $entry->{blog_title} = $feed->{title};
+      $entry->{blog_url} = $feed->{url};
+    }
+    add_age_warning($feed, \@candidates, $date);
+    push @entries, @candidates;
   }
   return \@entries;
 }
 
 sub add_age_warning {
   my $feed = shift;
-  my $nodes = shift;
+  my $entries = shift;
   my $date = shift;
   # feed modification date is smaller than the date given
   my ($node) = $xpc->findnodes("/rss/channel | /atom:feed", $feed->{doc});
@@ -537,9 +547,8 @@ sub add_age_warning {
     }
   } else {
     # or no entry found with a modification date equal or bigger than the date given
-    for my $node (@$nodes) {
-      my $node_date = updated($node);
-      return if $node_date and DateTime->compare_ignore_floating($node_date, $date) >= 0;
+    for my $entry (@$entries) {
+      return if DateTime->compare_ignore_floating($entry->{date}, $date) >= 0;
     }
     $feed->{message} = "No entry newer than 90 days";
     $feed->{code} = 206; # partial content
@@ -556,10 +565,31 @@ sub updated {
   return $dt;
 }
 
+sub id {
+  my $node = shift;
+  return unless $node;
+  my $id = $xpc->findvalue('guid | atom:id', $node); # id is mandatory for Atom
+  $id ||= $node->findvalue('link'); # one of the following three is mandatory for RSS
+  $id ||= $node->findvalue('title');
+  $id ||= $node->findvalue('description');
+  return $id;
+}
+
+sub unique {
+  my %seen;
+  my @unique;
+  for my $node (@_) {
+    next if $seen{$node->{id}};
+    $seen{$node->{id}} = 1;
+    unshift(@unique, $node);
+  }
+  return @unique;
+}
+
 sub limit {
   my $entries = shift;
   my $limit = shift;
-  @$entries = sort { $b->{day} cmp $a->{day} } @$entries;
+  @$entries = sort { DateTime->compare( $b->{date}, $a->{date} ) } @$entries;
   return [@$entries[0 .. min($#$entries, $limit - 1)]];
 }
 
@@ -636,9 +666,7 @@ sub add_data {
       . '/rss/channel/dc:contributor | '
       . '/rss/channel/webMaster ', $element) unless @authors;
     $entry->{authors} = @authors ? \@authors : undef; # key must exist in the hash
-    my $date = updated($element);
-    $entry->{date} = $date;
-    $entry->{day} = $date ? $date->ymd : "(no date found)";
+    $entry->{day} = DateTime->compare($entry->{date}, $undefined_date) == 0 ? "(no date found)" : $entry->{date}->ymd;
     my @categories = map { xml_escape $_->to_literal } $xpc->findnodes('category | atom:category/@term', $element);
     $entry->{categories} = @categories ? \@categories : undef; # key must exist in the hash
     my $content = $xpc->findvalue('description | atom:content | summary | atom:summary', $element);
