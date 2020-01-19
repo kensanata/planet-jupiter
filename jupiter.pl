@@ -588,7 +588,7 @@ sub limit {
   my $entries = shift;
   my $limit = shift;
   # we want the most recent entries overall
-  @$entries = sort { DateTime->compare( $b->{date}, $a->{date} ) } @$entries;
+  @$entries = sort { DateTime->compare( $b->{date}, $a->{date} ) } unique(@$entries);
   return [@$entries[0 .. min($#$entries, $limit - 1)]];
 }
 
@@ -699,9 +699,11 @@ sub excerpt {
   return $text;
 }
 
-# when there's a value that's supposed to be text but isn't, then we can try to
-# turn to HTML and from there to text...
+# When there's a value that's supposed to be text but isn't, then we can try to
+# turn it to HTML and from there to text... This is an ugly hack and I wish it
+# wasn't necessary.
 sub strip_html {
+  return shift;
   my $str = shift;
   return '' unless $str;
   my $doc = eval { XML::LibXML->load_html(string => $str) };
