@@ -539,12 +539,10 @@ sub add_age_warning {
   # feed modification date is smaller than the date given
   my ($node) = $xpc->findnodes("/rss/channel | /atom:feed", $feed->{doc});
   my $feed_date = updated($node);
-  if ($feed_date) {
-    if (DateTime->compare_ignore_floating($feed_date, $date) == -1) {
-      $feed->{message} = "No feed updates in 90 days";
-      $feed->{code} = 206; # partial content
-      return;
-    }
+  if ($feed_date and DateTime->compare_ignore_floating($feed_date, $date) == -1) {
+    $feed->{message} = "No feed updates in 90 days";
+    $feed->{code} = 206; # partial content
+    return;
   } else {
     # or no entry found with a modification date equal or bigger than the date given
     for my $entry (@$entries) {
@@ -581,7 +579,7 @@ sub unique {
   for my $node (@_) {
     next if $seen{$node->{id}};
     $seen{$node->{id}} = 1;
-    unshift(@unique, $node);
+    push(@unique, $node);
   }
   return @unique;
 }
@@ -589,6 +587,7 @@ sub unique {
 sub limit {
   my $entries = shift;
   my $limit = shift;
+  # we want the most recent entries overall
   @$entries = sort { DateTime->compare( $b->{date}, $a->{date} ) } @$entries;
   return [@$entries[0 .. min($#$entries, $limit - 1)]];
 }
