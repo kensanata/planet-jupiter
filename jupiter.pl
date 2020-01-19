@@ -656,7 +656,7 @@ sub add_data {
     $entry->{title} = xml_escape $xpc->findvalue('title | atom:title', $element) || "Untitled";
     $entry->{link} = xml_escape $xpc->findvalue('link | atom:link[@rel="alternate"][@type="text/html"]/@href', $element);
     $entry->{link} ||= xml_escape $xpc->findvalue('atom:link/@href', $element) || "";
-    my @authors = map { xml_escape $_->to_literal } $xpc->findnodes(
+    my @authors = map { xml_escape strip_html($_->to_literal) } $xpc->findnodes(
       'author | atom:author/atom:name | atom:contributor/atom:name | dc:creator | dc:contributor', $element);
     @authors = map { xml_escape $_->to_literal } $xpc->findnodes(
       '/atom:feed/atom:author/atom:name | '
@@ -697,6 +697,16 @@ sub excerpt {
   $text = xml_escape $text;
   $text =~ s/¶/<span class="paragraph">¶ <\/span>/g;
   return $text;
+}
+
+# when there's a value that's supposed to be text but isn't, then we can try to
+# turn to HTML and from there to text...
+sub strip_html {
+  my $str = shift;
+  return '' unless $str;
+  my $doc = eval { XML::LibXML->load_html(string => $str) };
+  return $str unless $doc;
+  return $doc->textContent();
 }
 
 1;
