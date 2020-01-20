@@ -41,7 +41,7 @@ my $rss = <<'EOT';
       <item>
          <title>السّلام عليك</title>
          <link>http://hello/wiki?user=Alex&amp;lang=ar</link>
-         <description>&lt;em&gt;D&amp;D&lt;/em&gt; is not bad!&lt;br&gt;You'll like &lt;span class='p-name'&gt;Foo &amp; Bar&lt;/span&gt;.</description>
+         <description>&lt;style&gt;some CSS, I guess&lt;/style&gt;&lt;em&gt;D&amp;D&lt;/em&gt; is not bad!&lt;br&gt;You'll like &lt;span class='p-name'&gt;Foo &amp; Bar&lt;/span&gt;.</description>
          <author>&lt;span class='p-author h-card'&gt;Alex Schroeder&lt;/span&gt;</author>
       </item>
    </channel>
@@ -69,6 +69,7 @@ is($doc->findnodes('//div[@class="content"]')->get_node(1)->toString(),
 like($doc->findnodes('//div[@class="permalink"]')->get_node(1)->toString(),
      qr(by Alex Schroeder),
      "Author HTML matches");
+unlike($doc->findvalue('//div[@class="content"]'), qr/CSS/, "Style is stripped");
 
 ok(-f "test-$id/rss2sample.xml", "RSS was generated");
 $doc = XML::LibXML->load_xml(location => "test-$id/rss2sample.xml");

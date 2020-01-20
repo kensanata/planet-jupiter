@@ -679,6 +679,9 @@ sub excerpt {
   return '(no excerpt)' unless $content;
   my $doc = eval { XML::LibXML->load_html(recover => 2, string => $content) };
   my $separator = "¶";
+  for my $node ($doc->findnodes('//style')) {
+    $node->parentNode->removeChild($node);
+  }
   for my $node ($doc->findnodes('//p | //br | //blockquote | //li | //td | //th | //div')) {
     $node->appendTextNode($separator);
   }
