@@ -658,7 +658,7 @@ sub add_data {
     $entry->{link} ||= xml_escape $xpc->findvalue('atom:link/@href', $element) || "";
     my @authors = map { xml_escape strip_html($_->to_literal) } $xpc->findnodes(
       'author | atom:author/atom:name | atom:contributor/atom:name | dc:creator | dc:contributor', $element);
-    @authors = map { xml_escape $_->to_literal } $xpc->findnodes(
+    @authors = map { xml_escape strip_html($_->to_literal) } $xpc->findnodes(
       '/atom:feed/atom:author/atom:name | '
       . '/atom:feed/atom:contributor/atom:name | '
       . '/rss/channel/dc:creator | '
@@ -666,7 +666,7 @@ sub add_data {
       . '/rss/channel/webMaster ', $element) unless @authors;
     $entry->{authors} = @authors ? \@authors : undef; # key must exist in the hash
     $entry->{day} = DateTime->compare($entry->{date}, $undefined_date) == 0 ? "(no date found)" : $entry->{date}->ymd;
-    my @categories = map { xml_escape $_->to_literal } $xpc->findnodes('category | atom:category/@term', $element);
+    my @categories = map { xml_escape strip_html($_->to_literal) } $xpc->findnodes('category | atom:category/@term', $element);
     $entry->{categories} = @categories ? \@categories : undef; # key must exist in the hash
     my $content = $xpc->findvalue('description | atom:content | summary | atom:summary', $element);
     $entry->{content} = xml_escape $content;
@@ -682,7 +682,7 @@ sub excerpt {
   for my $node ($doc->findnodes('//p | //br | //blockquote | //li | //td | //th | //div')) {
     $node->appendTextNode($separator);
   }
-  my $text = $doc->textContent();
+  my $text = strip_html($doc->textContent()); # hack: fix double escaping!
   $text =~ s/( +|----+)/ /g;
   # collapse whitespace and trim
   $text =~ s/\s+/ /g;

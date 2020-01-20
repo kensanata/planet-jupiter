@@ -41,7 +41,7 @@ my $rss = <<'EOT';
       <item>
          <title>السّلام عليك</title>
          <link>http://hello/wiki?user=Alex&amp;lang=ar</link>
-         <description>&lt;em&gt;D&amp;D&lt;/em&gt; is not bad!&lt;br&gt;You'll like it.</description>
+         <description>&lt;em&gt;D&amp;D&lt;/em&gt; is not bad!&lt;br&gt;You'll like &lt;span class='p-name'&gt;Foo &amp; Bar&lt;/span&gt;.</description>
          <author>&lt;span class='p-author h-card'&gt;Alex Schroeder&lt;/span&gt;</author>
       </item>
    </channel>
@@ -62,9 +62,9 @@ is($doc->findvalue('//h3/a[position()=2]'), "السّلام عليك", "Encoded 
 is($doc->findvalue('//li/a[position()=2]'), "Foo & Bar", "Encoded feed title matches");
 is($doc->findvalue('//h3/a[position()=1]'), "Foo & Bar", "Encoded feed title matches again");
 is($doc->findvalue('//h3/a[position()=2]/@href'), "http://hello/wiki?user=Alex&lang=ar", "Encoded link matches");
-is($doc->findvalue('//div[@class="content"]'), q(D&D is not bad!¶ You'll like it.), "Content value matches");
+is($doc->findvalue('//div[@class="content"]'), q(D&D is not bad!¶ You'll like Foo & Bar.), "Content value matches");
 is($doc->findnodes('//div[@class="content"]')->get_node(1)->toString(),
-   q(<div class="content">D&amp;D is not bad!<span class="paragraph">¶ </span>You'll like it.</div>),
+   q(<div class="content">D&amp;D is not bad!<span class="paragraph">¶ </span>You'll like Foo &amp; Bar.</div>),
    "Content HTML matches");
 like($doc->findnodes('//div[@class="permalink"]')->get_node(1)->toString(),
      qr(by Alex Schroeder),
@@ -73,7 +73,7 @@ like($doc->findnodes('//div[@class="permalink"]')->get_node(1)->toString(),
 ok(-f "test-$id/rss2sample.xml", "RSS was generated");
 $doc = XML::LibXML->load_xml(location => "test-$id/rss2sample.xml");
 like($doc->findvalue('/rss/channel/item/description'),
-     qr/<em>D&D<\/em> is not bad!<br>You'll like it\./,
+     qr/<em>D&D<\/em> is not bad!<br>You'll like <span class='p-name'>Foo & Bar<\/span>\./,
      "Encoded content matches");
 
 done_testing;
