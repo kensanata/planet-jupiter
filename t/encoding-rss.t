@@ -42,6 +42,7 @@ my $rss = <<'EOT';
          <title>السّلام عليك</title>
          <link>http://hello/wiki?user=Alex&amp;lang=ar</link>
          <description>&lt;em&gt;D&amp;D&lt;/em&gt; is not bad!&lt;br&gt;You'll like it.</description>
+         <author>&lt;span class='p-author h-card'&gt;Alex Schroeder&lt;/span&gt;</author>
       </item>
    </channel>
 </rss>
@@ -65,6 +66,9 @@ is($doc->findvalue('//div[@class="content"]'), q(D&D is not bad!¶ You'll like i
 is($doc->findnodes('//div[@class="content"]')->get_node(1)->toString(),
    q(<div class="content">D&amp;D is not bad!<span class="paragraph">¶ </span>You'll like it.</div>),
    "Content HTML matches");
+like($doc->findnodes('//div[@class="permalink"]')->get_node(1)->toString(),
+     qr(by Alex Schroeder),
+     "Author HTML matches");
 
 ok(-f "test-$id/rss2sample.xml", "RSS was generated");
 $doc = XML::LibXML->load_xml(location => "test-$id/rss2sample.xml");

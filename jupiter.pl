@@ -703,7 +703,6 @@ sub excerpt {
 # turn it to HTML and from there to text... This is an ugly hack and I wish it
 # wasn't necessary.
 sub strip_html {
-  return shift;
   my $str = shift;
   return '' unless $str;
   my $doc = eval { XML::LibXML->load_html(string => $str) };
