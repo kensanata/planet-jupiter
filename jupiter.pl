@@ -492,7 +492,7 @@ sub read_opml {
 sub entries {
   my $feeds = shift;
   my $limit = shift;
-  my $date = DateTime->now->subtract( days => 90 ); # compute once
+  my $date = DateTime->now(time_zone => 'UTC')->subtract( days => 90 ); # compute once
   my @entries;
   for my $feed (@$feeds) {
     next unless -r $feed->{cache_file};
@@ -539,14 +539,14 @@ sub add_age_warning {
   # feed modification date is smaller than the date given
   my ($node) = $xpc->findnodes("/rss/channel | /atom:feed", $feed->{doc});
   my $feed_date = updated($node);
-  if ($feed_date and DateTime->compare_ignore_floating($feed_date, $date) == -1) {
+  if ($feed_date and DateTime->compare($feed_date, $date) == -1) {
     $feed->{message} = "No feed updates in 90 days";
     $feed->{code} = 206; # partial content
     return;
   } else {
     # or no entry found with a modification date equal or bigger than the date given
     for my $entry (@$entries) {
-      return if DateTime->compare_ignore_floating($entry->{date}, $date) >= 0;
+      return if DateTime->compare($entry->{date}, $date) >= 0;
     }
     $feed->{message} = "No entry newer than 90 days";
     $feed->{code} = 206; # partial content
@@ -610,7 +610,9 @@ B<authors> are the authors (or the Dublin Core contributor), a list of strings.
 
 B<date> is the publication date, as a DateTime object.
 
-B<day> is the publication date, in ISO date format: YYYY-MM-DD.
+B<day> is the publication date, in ISO date format: YYYY-MM-DD, for the UTC
+timezone. The UTC timezone is picked so that the day doesn't jump back and forth
+when sorting entries by date.
 
 B<content> is the full post content, as string or encoded HTML.
 
@@ -665,7 +667,11 @@ sub add_data {
       . '/rss/channel/dc:contributor | '
       . '/rss/channel/webMaster ', $element) unless @authors;
     $entry->{authors} = @authors ? \@authors : undef; # key must exist in the hash
-    $entry->{day} = DateTime->compare($entry->{date}, $undefined_date) == 0 ? "(no date found)" : $entry->{date}->ymd;
+    if (DateTime->compare($entry->{date}, $undefined_date) == 0) {
+      $entry->{day} =  "(no date found)";
+    } else {
+      $entry->{day} = $entry->{date}->clone->set_time_zone('UTC')->ymd; # operate on a clone
+    }
     my @categories = map { xml_escape strip_html($_->to_literal) } $xpc->findnodes('category | atom:category/@term', $element);
     $entry->{categories} = @categories ? \@categories : undef; # key must exist in the hash
     my $content = $xpc->findvalue('description | atom:content | summary | atom:summary', $element);
