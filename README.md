@@ -126,7 +126,7 @@ second is the template to use:
 ## Generate the RSS feed
 
 This happens at the same time as when you generate the HTML. It takes all the
-entries that are being added to the HTML and puts the into a feed. If you don't
+entries that are being added to the HTML and puts them into a feed. If you don't
 specify an HTML file, it tries to use `feed.rss` as the template for the feed
 and it writes all the entries into a file called `feed.xml`. Again, the
 template is written for `Mojo::Template`.
@@ -164,7 +164,7 @@ For an example of how it might look, check out the setup for the planets I run.
 ## What about the JSON file?
 
 There's a JSON file that gets generated and updated as you run Planet Jupiter.
-It's name depends on the OPML files used. It records metadata for every feed in
+Its name depends on the OPML files used. It records metadata for every feed in
 the OPML file that isn't stored in the feeds themselves.
 
 - `message` is the HTTP status message, or a similar message such as "No
