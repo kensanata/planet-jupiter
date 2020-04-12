@@ -644,9 +644,9 @@ sub add_data {
   for my $feed (@$feeds) {
     next unless $feed->{doc};
     # data in the feed overrides defaults set in the OPML (XML already escaped)
-    $feed->{title} = xml_escape $xpc->findvalue('/rss/channel/title | /atom:feed/atom:title', $feed->{doc}) || $feed->{title} || "";
-    $feed->{url} = xml_escape $xpc->findvalue('/atom:feed/atom:link[@rel="self"]/@href', $feed->{doc}) || $feed->{url} || "";
-    $feed->{link} = xml_escape $xpc->findvalue('/rss/channel/link | /atom:feed/atom:link[@rel="alternate"][@type="text/html"]/@href', $feed->{doc}) || $feed->{link} || "";
+    $feed->{title} = xml_escape($xpc->findvalue('/rss/channel/title | /atom:feed/atom:title', $feed->{doc})) || $feed->{title} || "";
+    $feed->{url} = xml_escape($xpc->findvalue('/atom:feed/atom:link[@rel="self"]/@href', $feed->{doc})) || $feed->{url} || "";
+    $feed->{link} = xml_escape($xpc->findvalue('/rss/channel/link | /atom:feed/atom:link[@rel="alternate"][@type="text/html"]/@href', $feed->{doc})) || $feed->{link} || "";
   }
   for my $entry (@$entries) {
     # copy from the feed (XML is already escaped)
