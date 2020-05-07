@@ -240,7 +240,8 @@ sub main {
   } elsif ($command eq 'html') {
     make_html(@ARGV);
   } else {
-    die "Use pod2text jupiter.pl to read the documentation\n";
+    my $parser = Pod::Simple::Text->new();
+    $parser->parse_file($0);
   }
 }
 
