@@ -21,7 +21,19 @@ use utf8;
 binmode(STDOUT, ":utf8");
 binmode(STDERR, ":utf8");
 
-=head1 Planet Jupiter
+=head1 NAME
+
+Planet Jupiter - an app that serves a river of news as a static page
+
+=head1 SYNOPSIS
+
+B<jupiter update> I<feed.opml>
+
+To generate F<index.html>:
+
+B<jupiter html> I<feed.opml>
+
+=head1 DESCRIPTION
 
 This program is used to pull together the latest updates from a bunch of other
 sites and display them on a single web page. The sites we get our updates from
@@ -47,7 +59,7 @@ thus it may make sense to send a bit more effort in making it presentable.
 This is how you update the feeds in a file called C<feed.opml>. It downloads all
 the feeds linked to in the OPML file and stores them in the cache directory.
 
-    perl jupiter.pl update feed.opml
+    jupiter update feed.opml
 
 The directory used to keep a copy of all the feeds in the OPML file has the same
 name as the OPML file but without the .opml extension. In other words, if your
@@ -66,44 +78,16 @@ This is how you generate the C<index.html> file based on the feeds of your
 C<feed.opml>. It assumes that you have already updated all the feeds (see
 above).
 
-    perl jupiter.pl html feed.opml
+    jupiter html feed.opml
 
-The file generation uses a template, C<template.html>. It is written for
-C<Mojo::Template>. The default templates use other files, such as the logo, the
-feed icon, a CSS file, and a small Javascript snippet to enable navigation using
-the C<J> and C<K> keys.
-
-You can specify a different HTML file to generate:
-
-    perl jupiter.pl html your.html feed.opml
-
-If you specify two HTML files, the first is the HTML file to generate and the
-second is the template to use:
-
-    perl jupiter.pl html your.html your-template.html feed.opml
+See L</OPTIONS> for ways to change how the HTML is generated.
 
 =head2 Generate the RSS feed
 
 This happens at the same time as when you generate the HTML. It takes all the
-entries that are being added to the HTML and puts the into a feed. If you don't
-specify an HTML file, it tries to use C<feed.rss> as the template for the feed
-and it writes all the entries into a file called C<feed.xml>. Again, the
-template is written for C<Mojo::Template>.
+entries that are being added to the HTML and puts the into a feed.
 
-You can specify up to two XML, RSS or ATOM files. The first is the name of the
-feed to generate, the second is the template to use:
-
-    perl jupiter.pl html atom.xml template.xml planet.html template.html feed.opml
-
-For more information about feeds, take a look at the specifications:
-
-=over
-
-=item RSS 2.0, L<https://cyber.harvard.edu/rss/rss.html>
-
-=item Atom Syndication, L<https://tools.ietf.org/html/rfc4287>
-
-=back
+See L</OPTIONS> for ways to change how the HTML is generated.
 
 =head2 Why separate the two steps?
 
@@ -114,13 +98,13 @@ you update your templates.
 The other reason is that it allows you to create subsets. For example, you can
 fetch the feeds for three different OPML files:
 
-    perl jupiter.pl update osr.opml indie.opml other.opml
+    jupiter update osr.opml indie.opml other.opml
 
 And then you can create three different HTML files:
 
-    perl jupiter.pl html osr.html osr.opml
-    perl jupiter.pl html indie.html indie.opml
-    perl jupiter.pl html rpg.html osr.opml indie.opml other.opml
+    jupiter html osr.html osr.opml
+    jupiter html indie.html indie.opml
+    jupiter html rpg.html osr.opml indie.opml other.opml
 
 For an example of how it might look, check out the setup for the planets I run.
 L<https://alexschroeder.ch/cgit/planet/about/>
@@ -166,6 +150,22 @@ error we encountered.
 Use the C<--log=LEVEL> to set the log level. Valid values for LEVEL are debug,
 info, warn, error, and fatal.
 
+=head1 LICENSE
+
+GNU Affero General Public License
+
+=head1 INSTALLATION
+
+Using C<cpan>:
+
+    cpan App::phoebe
+
+Manual install:
+
+    perl Makefile.PL
+    make
+    make install
+
 =head2 Dependencies
 
 To run Jupiter on Debian:
@@ -200,6 +200,63 @@ Therefore, let's build it and install it as a Debian package.
 
 To generate the C<README.md> from the source file: C<libpod-markdown-perl>.
 
+=head1 FILES
+
+There are a number of files in the F<share> directory which you can use as
+starting points.
+
+F<template.html> is the HTML template.
+
+F<default.css> is a small CSS file used by F<template.html>.
+
+F<personalize.js> is a small Javascript file used by F<template.html> used to
+allow visitors to jump from one article to the next using C<J> and C<K>.
+
+F<jupiter.png> is used by F<template.html> as the icon.
+
+F<jupiter.svg> is used by F<template.html> as the logo.
+
+F<feed.png> is used by F<template.html> as the icon for the feeds in the
+sidebar.
+
+F<feed.rss> is the feed template.
+
+=head1 OPTIONS
+
+HTML generation uses a template, C<template.html>. It is written for
+C<Mojo::Template> and you can find it in the F<share> directory of your
+distribution. The default templates use other files, such as the logo, the feed
+icon, a CSS file, and a small Javascript snippet to enable navigation using the
+C<J> and C<K> keys (see above).
+
+You can specify a different HTML file to generate:
+
+B<jupiter html> I<your.html feed.opml>
+
+If you specify two HTML files, the first is the HTML file to generate and the
+second is the template to use. Both must use the C<.html> extension.
+
+B<jupiter html> I<your.html your-template.html feed.opml>
+
+Feed generation uses a template, C<feed.rss>. It writes all the entries into a
+file called C<feed.xml>. Again, the template is written for C<Mojo::Template>.
+
+You can specify up to two XML, RSS or ATOM files. They must uses one of these
+three extensions: C<.xml>, C<.rss>, or C<.atom>. The first is the name of the
+feed to generate, the second is the template to use:
+
+B<jupiter html> I<atom.xml template.xml planet.html template.html feed.opml>
+
+In the above case, Planet Jupiter will write a feed called F<atom.xml> based on
+F<template.xml> and a HTML file called F<planet.html> based on F<template.html>,
+using the cached entries matching the feeds in F<feed.opml>.
+
+=head1 SEE ALSO
+
+RSS 2.0, L<https://cyber.harvard.edu/rss/rss.html>
+
+Atom Syndication, L<https://tools.ietf.org/html/rfc4287>
+
 =cut
 
 use Cpanel::JSON::XS;
@@ -216,6 +273,7 @@ use Mojo::UserAgent;
 use Pod::Simple::Text;
 use XML::LibXML;
 use Mojo::Util qw(slugify trim xml_escape html_unescape);
+use File::ShareDir 'dist_file';
 
 use vars qw($log);
 our $log = Mojo::Log->new;
@@ -386,12 +444,12 @@ sub make_html {
 
 sub html_file {
   my ($html) = grep /\.html$/, @_;
-  return $html||'index.html';
+  return $html || 'index.html';
 }
 
 sub html_template_file {
   my ($html, $template) = grep /\.html$/, @_;
-  $template ||= 'template.html';
+  $template ||= dist_file('App-jupiter', 'template.html');
   die "HTML template $template not found\n" unless -r $template;
   return $template;
 }
@@ -405,7 +463,7 @@ sub feed_file {
 sub feed_template_file {
   my ($feed, $template) = grep /\.(xml|rss|atom)$/, @_;
   return $template if $template;
-  return 'feed.rss';
+  return dist_file('App-jupiter', 'feed.rss');
 }
 
 sub apply_template {

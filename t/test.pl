@@ -17,7 +17,7 @@ use Modern::Perl;
 use Mojo::Server::Daemon;
 use File::Slurper qw(write_binary);
 
-do './jupiter.pl';
+do 'script/jupiter';
 
 $Jupiter::log->level('warn');
 
@@ -26,7 +26,7 @@ my $port;
 my $daemon;
 
 sub init {
-  $id = int(rand(1000));
+  $id = sprintf("%04d", int(rand(1000)));
   $port = 10000 + $id;
   mkdir("test-$id");
   return $id, $port;
