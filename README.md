@@ -1,6 +1,6 @@
 # NAME
 
-Planet Jupiter - an app that serves a river of news as a static page
+jupiter - turn a list of feeds into a HTML page, a river of news
 
 # SYNOPSIS
 
@@ -12,9 +12,20 @@ To generate `index.html`:
 
 # DESCRIPTION
 
-This program is used to pull together the latest updates from a bunch of other
-sites and display them on a single web page. The sites we get our updates from
-are defined in an OPML file.
+Planet Jupiter is used to pull together the latest updates from a bunch of other
+sites and display them on a single web page, the "river of news". The sites we
+get our updates from are defined in an OPML file.
+
+A river of news, according to Dave Winer, is a feed aggregator. New items appear
+at the top and old items disappear at the bottom. When it's gone, it's gone.
+There is no count of unread items. The goal is to fight the _fear of missing
+out_ (FOMO).
+
+Each item looks similar to every other: headline, link, an extract, maybe a date
+and an author. Extracts contain but the beginning of the article's text; all
+markup is removed; no images. The goal is to make it the page easy to skim.
+Scroll down until you find something interesting and follow the link to the
+original article if you want to read it.
 
 ## The OPML file
 
@@ -22,7 +33,7 @@ You **need** an OPML file. It's an XML file linking to _feeds_. Here's an
 example listing just one feed. In order to add more, add more `outline`
 elements with the `xmlUrl` attribute. The exact order and nesting does not
 matter. People can _import_ these OPML files into their own feed readers and
-thus it may make sense to send a bit more effort in making it presentable.
+thus it may make sense to spend a bit more effort in making it presentable.
 
     <opml version="2.0">
       <body>
@@ -211,9 +222,14 @@ using the cached entries matching the feeds in `feed.opml`.
 
 # SEE ALSO
 
+OPML 2.0, [http://dev.opml.org/spec2.html](http://dev.opml.org/spec2.html)
+
 RSS 2.0, [https://cyber.harvard.edu/rss/rss.html](https://cyber.harvard.edu/rss/rss.html)
 
 Atom Syndication, [https://tools.ietf.org/html/rfc4287](https://tools.ietf.org/html/rfc4287)
+
+River of News,
+[http://scripting.com/2014/06/02/whatIsARiverOfNewsAggregator.html](http://scripting.com/2014/06/02/whatIsARiverOfNewsAggregator.html)
 
 ## Writing templates
 
