@@ -17,7 +17,7 @@ use Modern::Perl;
 use Mojo::Server::Daemon;
 use File::Slurper qw(write_binary);
 
-do 'script/jupiter';
+do './script/jupiter';
 
 $Jupiter::log->level('warn');
 
