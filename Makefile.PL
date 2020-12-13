@@ -22,10 +22,14 @@ WriteMakefile(
     'Mojo::UserAgent::Role::Queued' => 0,
     'XML::LibXML' => 0,
     'File::Slurper' => 0,
+    'File::ShareDir' => 0,
     'Cpanel::JSON::XS' => 0,
     'DateTime' => 0,
     'DateTime::Format::Mail' => 0,
     'DateTime::Format::ISO8601' => 0,
+  },
+  BUILD_REQUIRES => {
+    'File::ShareDir::Install' => 0,
   },
   META_MERGE => {
     'meta-spec' => { version => 2 },
