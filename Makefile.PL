@@ -28,7 +28,8 @@ WriteMakefile(
     'DateTime::Format::Mail' => 0,
     'DateTime::Format::ISO8601' => 0,
   },
-  BUILD_REQUIRES => {
+  CONFIGURE_REQUIRES => {
+    'ExtUtils::MakeMaker' => '6.52',
     'File::ShareDir::Install' => 0,
   },
   META_MERGE => {
