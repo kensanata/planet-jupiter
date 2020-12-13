@@ -1,10 +1,10 @@
 package App::jupiter;
 
-our $VERSION = 1.00;
+our $VERSION = 1.01;
 
 =head1 NAME
 
-App::jupiter - an app that serves a river of news as a static page
+Jupiter - an app that serves a river of news as a static page
 
 =head1 DESCRIPTION
 
