@@ -736,12 +736,13 @@ sub add_data {
     $entry->{categories} = @categories ? \@categories : undef; # key must exist in the hash
     $entry->{excerpt} = '';
     $entry->{content} = '';
-    my @nodes = $xpc->findnodes('description | atom:content | summary | atom:summary', $element);
-    my $content = shift(@nodes); # take the first node
+    my @nodes = $xpc->findnodes('description | atom:content', $element);
+    @nodes = $xpc->findnodes('summary | atom:summary', $element) unless @nodes;
+    my $content = shift(@nodes);
     if ($content) {
       $entry->{excerpt} = excerpt($content->to_literal);
       for my $child ($content->childNodes()) {
-	$entry->{content} .= $child->toString();
+	$entry->{content} .= xml_escape $child->toString();
       }
     }
   }
