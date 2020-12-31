@@ -14,7 +14,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use Modern::Perl;
-use Test::More;
+use Test::More tests => 32;
 use XML::LibXML;
 use File::Slurper qw(read_binary write_binary);
 use Cpanel::JSON::XS;
