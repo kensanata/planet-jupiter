@@ -87,6 +87,7 @@ $doc = XML::LibXML->load_xml(location => "test-$id/rss2sample.xml");
 is($doc->findvalue('//item/title'), "Atom draft-07 snapshot", "Item title");
 my @nodes = $doc->findnodes('//item/description');
 my $node = shift(@nodes);
-like($node->toString, qr(<p><i>\[Update: The Atom draft is finished\.\]</i></p>), "Item description");
+like($node->toString, qr(&lt;p&gt;&lt;i&gt;\[Update: The Atom draft is finished\.\]&lt;/i&gt;&lt;/p&gt;),
+     "Item description");
 
 done_testing();
