@@ -470,7 +470,7 @@ sub apply_template {
   return $mnt->render(@_);
 }
 
-=head1 WRITING TEMPLATES
+=head1 TEMPLATES
 
 The page template is called with three hash references: C<globals>, C<feeds>,
 and C<entries>. The keys of these three hash references are documented below.
@@ -734,9 +734,16 @@ sub add_data {
     }
     my @categories = map { xml_escape strip_html($_->to_literal) } $xpc->findnodes('category | atom:category/@term', $element);
     $entry->{categories} = @categories ? \@categories : undef; # key must exist in the hash
-    my $content = $xpc->findvalue('description | atom:content | summary | atom:summary', $element);
-    $entry->{content} = xml_escape $content;
-    $entry->{excerpt} = excerpt($content);
+    $entry->{excerpt} = '';
+    $entry->{content} = '';
+    my @nodes = $xpc->findnodes('description | atom:content | summary | atom:summary', $element);
+    my $content = shift(@nodes); # take the first node
+    if ($content) {
+      $entry->{excerpt} = excerpt($content->to_literal);
+      for my $child ($content->childNodes()) {
+	$entry->{content} .= $child->toString();
+      }
+    }
   }
 }
 
@@ -751,7 +758,7 @@ sub excerpt {
   for my $node ($doc->findnodes('//p | //br | //blockquote | //li | //td | //th | //div')) {
     $node->appendTextNode($separator);
   }
-  my $text = strip_html($doc->textContent()); # hack: fix double escaping!
+  my $text = strip_html($doc->textContent());
   $text =~ s/( +|----+)/ /g;
   # collapse whitespace and trim
   $text =~ s/\s+/ /g;
