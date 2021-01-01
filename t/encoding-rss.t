@@ -72,7 +72,7 @@ unlike($doc->findvalue('//div[@class="content"]'), qr/CSS/, "Style is stripped")
 
 ok(-f "test-$id/rss2sample.xml", "RSS was generated");
 $doc = XML::LibXML->load_xml(location => "test-$id/rss2sample.xml");
-like($doc->findvalue('/rss/channel/item/description'),
+like(($doc->findnodes('/rss/channel/item/description'))[0]->toString,
      qr/&lt;em&gt;D&amp;D&lt;\/em&gt; is not bad!&lt;br&gt;You'll like &lt;span class='p-name'&gt;Foo &amp; Bar&lt;\/span&gt;\./,
      "Encoded content matches");
 
