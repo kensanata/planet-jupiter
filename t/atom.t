@@ -67,6 +67,12 @@ my $atom = <<'EOT';
       </div>
     </content>
   </entry>
+  <entry>
+    <title>HTML Example</title>
+    <link rel="alternate" type="text/html"
+     href="http://example.org/test.html"/>
+    <content type="html">&lt;p&gt;&lt;i&gt;Yeah!&lt;/i&gt;&lt;/p&gt;</content>
+  </entry>
 </feed>
 EOT
 
@@ -80,14 +86,20 @@ Jupiter::make_html("test-$id/rss2sample.html", "test-$id/rss2sample.xml", "test-
 
 my $doc = XML::LibXML->load_html(location => "test-$id/rss2sample.html");
 is($doc->findvalue('//h1'), "Planet", "HTML title");
-is($doc->findvalue('//h3'), "dive into mark — Atom draft-07 snapshot", "Entry title");
-is($doc->findvalue('//div[@class="content"]'), "[Update: The Atom draft is finished.]", "Entry content");
+is($doc->findvalue('//div[@class="post"][position()=1]/h3'), "dive into mark — Atom draft-07 snapshot", "Entry title");
+is($doc->findvalue('//div[@class="post"][position()=1]/div[@class="content"]'), "[Update: The Atom draft is finished.]", "Entry content");
 
 $doc = XML::LibXML->load_xml(location => "test-$id/rss2sample.xml");
-is($doc->findvalue('//item/title'), "Atom draft-07 snapshot", "Item title");
-my @nodes = $doc->findnodes('//item/description');
+is($doc->findvalue('//item[position()=1]/title'), "Atom draft-07 snapshot", "XHTML Item title");
+my @nodes = $doc->findnodes('//item[position()=1]/description');
 my $node = shift(@nodes);
 like($node->toString, qr(&lt;p&gt;&lt;i&gt;\[Update: The Atom draft is finished\.\]&lt;/i&gt;&lt;/p&gt;),
-     "Item description");
+     "XHTML Item description");
+
+is($doc->findvalue('//item[position()=2]/title'), "HTML Example", "HTML Item title");
+@nodes = $doc->findnodes('//item[position()=2]/description');
+$node = shift(@nodes);
+like($node->toString, qr(&lt;p&gt;&lt;i&gt;Yeah!&lt;/i&gt;&lt;/p&gt;),
+     "HTML Item description");
 
 done_testing();

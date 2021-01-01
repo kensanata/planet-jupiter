@@ -739,10 +739,16 @@ sub add_data {
     my @nodes = $xpc->findnodes('description | atom:content', $element);
     @nodes = $xpc->findnodes('summary | atom:summary', $element) unless @nodes;
     my $content = shift(@nodes);
+    # The default is that the content is either plain text or escaped HTML,
+    # which is what we want for RSS. For Atom feeds, type="xhtml" means that the
+    # content is XHTML, so it needs to be escaped.
+    my $is_xhtml = $content->hasAttribute("type") && $content->getAttribute("type") eq "xhtml";
     if ($content) {
       $entry->{excerpt} = excerpt($content->to_literal);
       for my $child ($content->childNodes()) {
-	$entry->{content} .= xml_escape $child->toString();
+	my $c = $child->toString();
+	$c = xml_escape $c if $is_xhtml;
+	$entry->{content} .= $c;
       }
     }
   }
