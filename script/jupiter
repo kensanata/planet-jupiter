@@ -617,8 +617,22 @@ sub updated {
   my @nodes = $xpc->findnodes('pubDate | atom:updated', $node) or return;
   my $date = $nodes[0]->textContent;
   my $dt = eval { DateTime::Format::Mail->parse_datetime($date) }
-  || eval { DateTime::Format::ISO8601->parse_datetime($date) };
+  || eval { DateTime::Format::ISO8601->parse_datetime($date) }
+  || eval { DateTime::Format::Mail->parse_datetime(french($date)) };
   return $dt;
+}
+
+my %wday = qw (lun. Mon mar. Tue mer. Wed jeu. Thu ven. Fri sam. Sat dim. Sunday);
+my %month = qw (janv. Jan févr. Feb mars Mar avr Apr mai May juin Jun
+		juil July août Aug sept. Sep oct. Oct nov. Nov déc. Dec);
+my $wday_re = join('|', map { quotemeta } keys %wday);
+my $month_re = join('|', map { quotemeta } keys %month);
+
+sub french {
+  my $date = shift;
+  $date =~ s/^($wday_re)/$wday{$1}/;
+  $date =~ s/\b($month_re)/$month{$1}/;
+  return $date;
 }
 
 sub id {
