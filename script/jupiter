@@ -284,6 +284,13 @@ $xpc->registerNs('dc', 'http://purl.org/dc/elements/1.1/');
 
 my $undefined_date = DateTime->from_epoch( epoch => 0 );
 
+my (%wday, %month, $wday_re, $month_re);
+%wday = qw (lun. Mon mar. Tue mer. Wed jeu. Thu ven. Fri sam. Sat dim. Sun);
+%month = qw (janv. Jan févr. Feb mars Mar avr. Apr mai May juin Jun
+	     juil. Jul août Aug sept. Sep oct. Oct nov. Nov déc. Dec);
+$wday_re = join('|', map { quotemeta } keys %wday) unless $wday_re;
+$month_re = join('|', map { quotemeta } keys %month) unless $month_re;
+
 # Our tests don't want to call main
 __PACKAGE__->main unless caller;
 
@@ -621,12 +628,6 @@ sub updated {
   || eval { DateTime::Format::Mail->parse_datetime(french($date)) };
   return $dt;
 }
-
-my %wday = qw (lun. Mon mar. Tue mer. Wed jeu. Thu ven. Fri sam. Sat dim. Sunday);
-my %month = qw (janv. Jan févr. Feb mars Mar avr Apr mai May juin Jun
-		juil July août Aug sept. Sep oct. Oct nov. Nov déc. Dec);
-my $wday_re = join('|', map { quotemeta } keys %wday);
-my $month_re = join('|', map { quotemeta } keys %month);
 
 sub french {
   my $date = shift;
