@@ -720,6 +720,8 @@ sub add_data {
     $feed->{title} = xml_escape($xpc->findvalue('/rss/channel/title | /atom:feed/atom:title', $feed->{doc})) || $feed->{title} || "";
     $feed->{url} = xml_escape($xpc->findvalue('/atom:feed/atom:link[@rel="self"]/@href', $feed->{doc})) || $feed->{url} || "";
     $feed->{link} = xml_escape($xpc->findvalue('/rss/channel/link | /atom:feed/atom:link[@rel="alternate"][@type="text/html"]/@href', $feed->{doc})) || $feed->{link} || "";
+    # if they just pasted a domain "foo" then "//foo" is a valid URL
+    $feed->{link} = "//" . $feed->{link} unless $feed->{link} =~ /\/\//;
   }
   for my $entry (@$entries) {
     # copy from the feed (XML is already escaped)
