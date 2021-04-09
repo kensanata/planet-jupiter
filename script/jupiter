@@ -142,8 +142,11 @@ and if a title is provided, it is stored in the JSON file and overrides the
 title in the OPML file.
 
 C<link> is the site's link for humans. When you generate the HTML, the feeds in
-the cache are parsed and if a title is provided, it is stored in the JSON file
-and overrides the link in the OPML file.
+the cache are parsed and if a link is provided, it is stored in the JSON file.
+If the OPML element contained a C<htmlURL> attribute, however, that takes
+precedence. The reasoning is that when a podcast is hosted on a platform which
+generates a link that you don't like and you know the link to the human-readable
+blog elsehwere, use the C<htmlURL> attribute in the OPML file to override this.
 
 C<last_modified> and C<etag> are two headers used for caching from the HTTP
 response that cannot be changed by data in the feed.
@@ -376,10 +379,10 @@ sub load_feed_metadata {
     my $data = decode_json read_binary("$filename.json");
     for my $feed (@$feeds) {
       my $url = $feed->{url};
-      # don't overwrite title from OPML file
+      # don't overwrite title and htmlUrl from OPML file
       $feed->{title} = $data->{$url}->{title} if $data->{$url}->{title};
+      $feed->{link} ||= $data->{$url}->{link};
       # all the other metadata is loaded from the JSON file
-      $feed->{link} = $data->{$url}->{link};
       $feed->{message} = $data->{$url}->{message};
       $feed->{code} = $data->{$url}->{code};
       $feed->{last_modified} = $data->{$url}->{last_modified};
@@ -539,9 +542,11 @@ sub read_opml {
     push @feeds, map {
       my $title = xml_escape $_->getAttribute('title');
       my $url = xml_escape $_->getAttribute('xmlUrl');
+      my $link = xml_escape $_->getAttribute('htmlUrl');
       {
 	title => $title,    # title in the OPML file
 	url => $url,        # feed URL in the OPML file
+	link => $link,      # web URL in the OPML file
 	opml_file => $file,
 	cache_dir => "$path/$name",
 	cache_file => "$path/$name/" . slugify($url),
@@ -716,10 +721,11 @@ sub add_data {
   # if there's a chance we're going to print it again.
   for my $feed (@$feeds) {
     next unless $feed->{doc};
-    # data in the feed overrides defaults set in the OPML (XML already escaped)
+    # title and url in the feed overrides title and xmlUrl set in the OPML (XML already escaped)
     $feed->{title} = xml_escape($xpc->findvalue('/rss/channel/title | /atom:feed/atom:title', $feed->{doc})) || $feed->{title} || "";
     $feed->{url} = xml_escape($xpc->findvalue('/atom:feed/atom:link[@rel="self"]/@href', $feed->{doc})) || $feed->{url} || "";
-    $feed->{link} = xml_escape($xpc->findvalue('/rss/channel/link | /atom:feed/atom:link[@rel="alternate"][@type="text/html"]/@href', $feed->{doc})) || $feed->{link} || "";
+    # link in the feed does not override htmlUrl in the OPML (XML already escaped)
+    $feed->{link} = $feed->{link} || xml_escape($xpc->findvalue('/rss/channel/link | /atom:feed/atom:link[@rel="alternate"][@type="text/html"]/@href', $feed->{doc})) || "";
     # if they just pasted a domain "foo" then "//foo" is a valid URL
     $feed->{link} = "//" . $feed->{link} unless $feed->{link} =~ /\/\//;
   }
