@@ -284,6 +284,7 @@ my $xpc = XML::LibXML::XPathContext->new;
 $xpc->registerNs('atom', 'http://www.w3.org/2005/Atom');
 $xpc->registerNs('html', 'http://www.w3.org/1999/xhtml');
 $xpc->registerNs('dc', 'http://purl.org/dc/elements/1.1/');
+$xpc->registerNs('itunes', 'http://www.itunes.com/dtds/podcast-1.0.dtd');
 
 my $undefined_date = DateTime->from_epoch( epoch => 0 );
 
@@ -759,8 +760,8 @@ sub add_data {
     $entry->{categories} = @categories ? \@categories : undef; # key must exist in the hash
     $entry->{excerpt} = '';
     $entry->{content} = '';
-    my @nodes = $xpc->findnodes('description | atom:content', $element);
-    @nodes = $xpc->findnodes('summary | atom:summary', $element) unless @nodes;
+    my @nodes = $xpc->findnodes('description[text()!=""] | atom:content[text()!=""]', $element);
+    @nodes = $xpc->findnodes('summary[text()!=""] | atom:summary[text()!=""] | itunes:summary[text()!=""]', $element) unless @nodes;
     my $content = shift(@nodes);
     # The default is that the content is either plain text or escaped HTML,
     # which is what we want for RSS. For Atom feeds, type="xhtml" means that the
