@@ -210,13 +210,11 @@ To run Jupiter on Debian we need:
 C<libmodern-perl-perl> for L<Modern::Perl>
 
 C<libmojolicious-perl> for L<Mojo::Template>, L<Mojo::UserAgent>, L<Mojo::Log>,
-and L<Mojo::Util>
+L<Mojo::JSON>, and L<Mojo::Util>
 
 C<libxml-libxml-perl> for L<XML::LibXML>
 
 C<libfile-slurper-perl> for L<File::Slurper>
-
-C<libcpanel-json-xs-perl> for L<Cpanel::JSON::XS>
 
 C<libdatetime-perl> for L<DateTime>
 
@@ -288,7 +286,6 @@ using the cached entries matching the feeds in F<feed.opml>.
 
 =cut
 
-use Cpanel::JSON::XS;
 use DateTime;
 use DateTime::Format::Mail;
 use DateTime::Format::ISO8601;
@@ -297,6 +294,7 @@ use File::Slurper qw(read_binary write_binary read_text write_text);
 use List::Util qw(uniq min shuffle);
 use Modern::Perl;
 use Mojo::Log;
+use Mojo::JSON qw(decode_json encode_json);
 use Mojo::Template;
 use Mojo::UserAgent;
 use Pod::Simple::Text;

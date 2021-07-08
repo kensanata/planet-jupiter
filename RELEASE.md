@@ -11,6 +11,8 @@ Increase the version in `lib/App/jupiter.pm`.
 Double check the `MANIFEST`. Did we add new files that should be in
 here?
 
+Double check `Makefile.PL`. Do we need to add more dependencies?
+
 Commit any changes and tag the release.
 
 Based on [How to upload a script to

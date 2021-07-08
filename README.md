@@ -182,13 +182,11 @@ To run Jupiter on Debian we need:
 `libmodern-perl-perl` for [Modern::Perl](https://metacpan.org/pod/Modern%3A%3APerl)
 
 `libmojolicious-perl` for [Mojo::Template](https://metacpan.org/pod/Mojo%3A%3ATemplate), [Mojo::UserAgent](https://metacpan.org/pod/Mojo%3A%3AUserAgent), [Mojo::Log](https://metacpan.org/pod/Mojo%3A%3ALog),
-and [Mojo::Util](https://metacpan.org/pod/Mojo%3A%3AUtil)
+[Mojo::JSON](https://metacpan.org/pod/Mojo%3A%3AJSON), and [Mojo::Util](https://metacpan.org/pod/Mojo%3A%3AUtil)
 
 `libxml-libxml-perl` for [XML::LibXML](https://metacpan.org/pod/XML%3A%3ALibXML)
 
 `libfile-slurper-perl` for [File::Slurper](https://metacpan.org/pod/File%3A%3ASlurper)
-
-`libcpanel-json-xs-perl` for [Cpanel::JSON::XS](https://metacpan.org/pod/Cpanel%3A%3AJSON%3A%3AXS)
 
 `libdatetime-perl` for [DateTime](https://metacpan.org/pod/DateTime)
 
