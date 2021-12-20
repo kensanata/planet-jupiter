@@ -654,7 +654,7 @@ sub add_age_warning {
 sub updated {
   my $node = shift;
   return unless $node;
-  my @nodes = $xpc->findnodes('pubDate | atom:updated', $node) or return;
+  my @nodes = $xpc->findnodes('pubDate | atom:published | atom:updated', $node) or return;
   my $date = $nodes[0]->textContent;
   my $dt = eval { DateTime::Format::Mail->parse_datetime($date) }
   || eval { DateTime::Format::ISO8601->parse_datetime($date) }
