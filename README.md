@@ -25,8 +25,8 @@ out_ (FOMO).
 
 Each item looks similar to every other: headline, link, an extract, maybe a date
 and an author. Extracts contain but the beginning of the article's text; all
-markup is removed; no images. The goal is to make it the page easy to skim.
-Scroll down until you find something interesting and follow the link to the
+markup is removed; no images. The goal is to make the page easy to skim:
+scroll down until you find something interesting and follow the link to the
 original article if you want to read it.
 
 ## The OPML file
