@@ -25,8 +25,8 @@ out_ (FOMO).
 
 Each item looks similar to every other: headline, link, an extract, maybe a date
 and an author. Extracts contain but the beginning of the article's text; all
-markup is removed; no images. The goal is to make the page easy to skim:
-scroll down until you find something interesting and follow the link to the
+markup is removed; no images. The goal is to make it the page easy to skim.
+Scroll down until you find something interesting and follow the link to the
 original article if you want to read it.
 
 ## The OPML file
@@ -37,19 +37,22 @@ elements with the `xmlUrl` attribute. The exact order and nesting does not
 matter. People can _import_ these OPML files into their own feed readers and
 thus it may make sense to spend a bit more effort in making it presentable.
 
-    <opml version="2.0">
-      <body>
-        <outline title="Alex Schroeder"
-                 xmlUrl="https://alexschroeder.ch/wiki?action=rss"/>
-      </body>
-    </opml>
+```xml
+<opml version="2.0">
+  <body>
+    <outline title="Alex Schroeder" xmlUrl="https://alexschroeder.ch/wiki?action=rss"/>
+  </body>
+</opml>
+```
 
 ## Update the feeds in your cache
 
 This is how you update the feeds in a file called `feed.opml`. It downloads all
 the feeds linked to in the OPML file and stores them in the cache directory.
 
-    jupiter update feed.opml
+```sh
+jupiter update feed.opml
+```
 
 The directory used to keep a copy of all the feeds in the OPML file has the same
 name as the OPML file but without the .opml extension. In other words, if your
@@ -68,7 +71,9 @@ After a while, the list of feeds in your OPML starts getting unwieldy. When you
 add a new feed, you might not want to fetch all of them. In this case, provide a
 regular expression surrounded by slashes to the `update` command:
 
-    jupiter update feed.opml /example/
+```sh
+jupiter update feed.opml /example/
+```
 
 Assuming a feed with a URL or title that matches the regular expression is
 listed in your OPML file, only that feed is going to get updated.
@@ -77,7 +82,9 @@ There is no need to escape slashes in the regular expression: `//rss/` works
 just fine. Beware shell escaping, however. Most likely, you need to surround the
 regular expression with single quotes if it contains spaces:
 
-    jupiter update feed.opml '/Halberds & Helmets/'
+```sh
+jupiter update feed.opml '/Halberds & Helmets/'
+```
 
 Notice how we assume that named entities such as `&amp;` have already been
 parsed into the appropriate strings.
@@ -88,7 +95,9 @@ This is how you generate the `index.html` file based on the feeds of your
 `feed.opml`. It assumes that you have already updated all the feeds (see
 above).
 
-    jupiter html feed.opml
+```sh
+jupiter html feed.opml
+```
 
 See ["OPTIONS"](#options) for ways to change how the HTML is generated.
 
@@ -108,13 +117,17 @@ you update your templates.
 The other reason is that it allows you to create subsets. For example, you can
 fetch the feeds for three different OPML files:
 
-    jupiter update osr.opml indie.opml other.opml
+```sh
+jupiter update osr.opml indie.opml other.opml
+```
 
 And then you can create three different HTML files:
 
-    jupiter html osr.html osr.opml
-    jupiter html indie.html indie.opml
-    jupiter html rpg.html osr.opml indie.opml other.opml
+```sh
+jupiter html osr.html osr.opml
+jupiter html indie.html indie.opml
+jupiter html rpg.html osr.opml indie.opml other.opml
+```
 
 For an example of how it might look, check out the setup for the planets I run.
 [https://alexschroeder.ch/cgit/planet/about/](https://alexschroeder.ch/cgit/planet/about/)
@@ -167,13 +180,17 @@ GNU Affero General Public License
 
 Using `cpan`:
 
-    cpan App::jupiter
+```sh
+cpan App::jupiter
+```
 
 Manual install:
 
-    perl Makefile.PL
-    make
-    make install
+```sh
+perl Makefile.PL
+make
+make install
+```
 
 ## Dependencies
 
@@ -197,10 +214,12 @@ To run Jupiter on Debian we need:
 Unfortunately, [Mojo::UserAgent::Role::Queued](https://metacpan.org/pod/Mojo%3A%3AUserAgent%3A%3ARole%3A%3AQueued) isn't packaged for Debian.
 Therefore, let's build it and install it as a Debian package.
 
-    sudo apt-get install libmodule-build-tiny-perl
-    sudo apt-get install dh-make-perl
-    sudo dh-make-perl --build --cpan Mojo::UserAgent::Role::Queued
-    dpkg --install libmojo-useragent-role-queued-perl_1.15-1_all.deb
+```sh
+sudo apt-get install libmodule-build-tiny-perl
+sudo apt-get install dh-make-perl
+sudo dh-make-perl --build --cpan Mojo::UserAgent::Role::Queued
+dpkg --install libmojo-useragent-role-queued-perl_1.15-1_all.deb
+```
 
 To generate the `README.md` from the source file, you need `pod2markdown`
 which you get in `libpod-markdown-perl`.
