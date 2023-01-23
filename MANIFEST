@@ -27,4 +27,5 @@ t/html-url.t
 t/limits.t
 t/messages.t
 t/rss2sample.xml
+t/sorting.t
 t/test.pl

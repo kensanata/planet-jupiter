@@ -40,9 +40,10 @@ thus it may make sense to spend a bit more effort in making it presentable.
 ```xml
 <opml version="2.0">
   <body>
-    <outline title="Alex Schroeder" xmlUrl="https://alexschroeder.ch/wiki?action=rss"/>
+    <outline title="Alex Schroeder"
+             xmlUrl="https://alexschroeder.ch/wiki?action=rss"/>
   </body>
-</opml>
+
 ```
 
 ## Update the feeds in your cache
@@ -50,8 +51,7 @@ thus it may make sense to spend a bit more effort in making it presentable.
 This is how you update the feeds in a file called `feed.opml`. It downloads all
 the feeds linked to in the OPML file and stores them in the cache directory.
 
-```sh
-jupiter update feed.opml
+
 ```
 
 The directory used to keep a copy of all the feeds in the OPML file has the same
@@ -71,8 +71,7 @@ After a while, the list of feeds in your OPML starts getting unwieldy. When you
 add a new feed, you might not want to fetch all of them. In this case, provide a
 regular expression surrounded by slashes to the `update` command:
 
-```sh
-jupiter update feed.opml /example/
+
 ```
 
 Assuming a feed with a URL or title that matches the regular expression is
@@ -82,8 +81,7 @@ There is no need to escape slashes in the regular expression: `//rss/` works
 just fine. Beware shell escaping, however. Most likely, you need to surround the
 regular expression with single quotes if it contains spaces:
 
-```sh
-jupiter update feed.opml '/Halberds & Helmets/'
+
 ```
 
 Notice how we assume that named entities such as `&amp;` have already been
@@ -95,8 +93,7 @@ This is how you generate the `index.html` file based on the feeds of your
 `feed.opml`. It assumes that you have already updated all the feeds (see
 above).
 
-```sh
-jupiter html feed.opml
+
 ```
 
 See ["OPTIONS"](#options) for ways to change how the HTML is generated.
@@ -117,8 +114,7 @@ you update your templates.
 The other reason is that it allows you to create subsets. For example, you can
 fetch the feeds for three different OPML files:
 
-```sh
-jupiter update osr.opml indie.opml other.opml
+
 ```
 
 And then you can create three different HTML files:
@@ -126,7 +122,7 @@ And then you can create three different HTML files:
 ```sh
 jupiter html osr.html osr.opml
 jupiter html indie.html indie.opml
-jupiter html rpg.html osr.opml indie.opml other.opml
+
 ```
 
 For an example of how it might look, check out the setup for the planets I run.
@@ -180,8 +176,7 @@ GNU Affero General Public License
 
 Using `cpan`:
 
-```sh
-cpan App::jupiter
+
 ```
 
 Manual install:
@@ -189,7 +184,7 @@ Manual install:
 ```sh
 perl Makefile.PL
 make
-make install
+
 ```
 
 ## Dependencies
@@ -218,7 +213,7 @@ Therefore, let's build it and install it as a Debian package.
 sudo apt-get install libmodule-build-tiny-perl
 sudo apt-get install dh-make-perl
 sudo dh-make-perl --build --cpan Mojo::UserAgent::Role::Queued
-dpkg --install libmojo-useragent-role-queued-perl_1.15-1_all.deb
+
 ```
 
 To generate the `README.md` from the source file, you need `pod2markdown`
