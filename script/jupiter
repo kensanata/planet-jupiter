@@ -815,7 +815,7 @@ sub excerpt {
   for my $node ($doc->findnodes('//style')) {
     $node->parentNode->removeChild($node);
   }
-  for my $node ($doc->findnodes('//p | //br | //blockquote | //li | //td | //th | //div')) {
+  for my $node ($doc->findnodes('//p | //br | //blockquote | //li | //td | //th | //div | //h1 | //h2 | //h3 | //h4 | //h5 | //h6')) {
     $node->appendTextNode($separator);
   }
   my $text = strip_html($doc->textContent());
