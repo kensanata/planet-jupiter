@@ -813,7 +813,7 @@ sub excerpt {
   return '(no excerpt)' unless $content;
   my $doc = eval { XML::LibXML->load_html(recover => 2, string => $content) };
   my $separator = "¶";
-  for my $node ($doc->findnodes('//style')) {
+  for my $node ($doc->findnodes('//style'), $doc->findnodes('//script')) {
     $node->parentNode->removeChild($node);
   }
   for my $node ($doc->findnodes('//p | //br | //blockquote | //li | //td | //th | //div | //h1 | //h2 | //h3 | //h4 | //h5 | //h6')) {
