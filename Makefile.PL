@@ -38,8 +38,8 @@ WriteMakefile(
     resources => {
       repository => {
 	type => 'git',
-	url  => 'https://alexschroeder.ch/cgit/planet-jupiter',
-	web  => 'https://alexschroeder.ch/cgit/planet-jupiter/about/',
+	url  => 'https://src.alexschroeder.ch/planet-jupiter.git/',
+	web  => 'https://src.alexschroeder.ch/planet-jupiter.git/',
       },
     },
   },
